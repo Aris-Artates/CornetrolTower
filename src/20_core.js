@@ -170,7 +170,7 @@ const UI = {
     const back = el('button', 'btn', '◂ Menu');
     back.style.padding = '3px 12px'; back.style.fontSize = '12px';
     back.onclick = () => Screens.menu();
-    this.topbarEl.append(back, el('span', 'brand', 'Corne-troll Tower'),
+    this.topbarEl.append(back, el('span', 'brand', 'Corne-trol Tower'),
       el('span', 'crumb', esc(crumb || '')), el('span', 'spacer'));
     this.hudEl = el('div', 'hud', hud || '');
     this.topbarEl.append(this.hudEl);

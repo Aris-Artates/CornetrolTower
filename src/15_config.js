@@ -2,7 +2,7 @@
    CONFIG — every numeric difficulty value lives here (tunable).
    ════════════════════════════════════════════════════════════════ */
 const CONFIG = {
-  storageKey: 'cornetroll-tower-save-v1',
+  storageKey: 'cornetrol-tower-save-v1',
   links: { discord: 'https://discord.gg/your-server-here', facebook: 'https://facebook.com/your-page-here' },
   audio: { master: 0.8, music: 0.35, sfx: 0.7 },
 
@@ -10,7 +10,7 @@ const CONFIG = {
     { num: 1, title: 'Flight School',       job: 'Typing cadet',          layer: 'Layer 0 — Dvorak base',  reuse: '—' },
     { num: 2, title: 'Security Checkpoint', job: 'X-ray officer',         layer: 'Layer 1 — NAV & mouse',  reuse: 'Layer 0' },
     { num: 3, title: 'Maintenance Bay',     job: 'Software engineer',     layer: 'Layer 2 — SYM',          reuse: 'Layers 0, 1' },
-    { num: 4, title: 'Corne-troll Tower',   job: 'Air traffic controller',layer: 'Layer 3 — FN',           reuse: 'Layers 0, 1' }
+    { num: 4, title: 'Corne-trol Tower',   job: 'Air traffic controler',layer: 'Layer 3 — FN',           reuse: 'Layers 0, 1' }
   ],
 
   /* ── Stage 1 ──────────────────────────────────────────────────── */

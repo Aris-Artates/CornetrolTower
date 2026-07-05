@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Corne-troll Tower</title>
+<title>Corne-trol Tower</title>
 <style>
 :root{
   --bg:#0b0f1a; --panel:#121a2b; --panel-2:#0e1524; --line:#24324f;
@@ -408,7 +408,7 @@ const KEY = (() => {
    CONFIG — every numeric difficulty value lives here (tunable).
    ════════════════════════════════════════════════════════════════ */
 const CONFIG = {
-  storageKey: 'cornetroll-tower-save-v1',
+  storageKey: 'cornetrol-tower-save-v1',
   links: { discord: 'https://discord.gg/your-server-here', facebook: 'https://facebook.com/your-page-here' },
   audio: { master: 0.8, music: 0.35, sfx: 0.7 },
 
@@ -416,7 +416,7 @@ const CONFIG = {
     { num: 1, title: 'Flight School',       job: 'Typing cadet',          layer: 'Layer 0 — Dvorak base',  reuse: '—' },
     { num: 2, title: 'Security Checkpoint', job: 'X-ray officer',         layer: 'Layer 1 — NAV & mouse',  reuse: 'Layer 0' },
     { num: 3, title: 'Maintenance Bay',     job: 'Software engineer',     layer: 'Layer 2 — SYM',          reuse: 'Layers 0, 1' },
-    { num: 4, title: 'Corne-troll Tower',   job: 'Air traffic controller',layer: 'Layer 3 — FN',           reuse: 'Layers 0, 1' }
+    { num: 4, title: 'Corne-trol Tower',   job: 'Air traffic controler',layer: 'Layer 3 — FN',           reuse: 'Layers 0, 1' }
   ],
 
   /* ── Stage 1 ──────────────────────────────────────────────────── */
@@ -703,7 +703,7 @@ const UI = {
     const back = el('button', 'btn', '◂ Menu');
     back.style.padding = '3px 12px'; back.style.fontSize = '12px';
     back.onclick = () => Screens.menu();
-    this.topbarEl.append(back, el('span', 'brand', 'Corne-troll Tower'),
+    this.topbarEl.append(back, el('span', 'brand', 'Corne-trol Tower'),
       el('span', 'crumb', esc(crumb || '')), el('span', 'spacer'));
     this.hudEl = el('div', 'hud', hud || '');
     this.topbarEl.append(this.hudEl);
@@ -851,7 +851,7 @@ const Screens = {
     Guide.idle();
     const w = el('div', 'wrap');
     w.append(el('div', 'menu-hero',
-      `<div class="tower">Corne-troll Tower</div>
+      `<div class="tower">Corne-trol Tower</div>
        <div class="tag">A 46-key career · Dvorak Programmer keymap</div>`));
     const list = el('div', 'menu-list');
     const mk = (label, fn) => { const b = el('button', 'btn', label); b.onclick = fn; return b; };
@@ -908,8 +908,8 @@ const Screens = {
     const w = el('div', 'wrap');
     w.append(el('h1', 'board', 'Credits'));
     w.append(el('div', null,
-      `<p><b>Corne-troll Tower</b> — a keyboard-learning game for the 46-key Corne split board.</p>
-       <p class="subtle">Game design &amp; code — the Corne-troll Tower crew<br>
+      `<p><b>Corne-trol Tower</b> — a keyboard-learning game for the 46-key Corne split board.</p>
+       <p class="subtle">Game design &amp; code — the Corne-trol Tower crew<br>
        Keymap — Dvorak Programmer v1 (see the in-game guide)<br>
        Built with plain HTML, CSS and JavaScript. No planes were harmed.</p>`));
     const row = el('div', null); row.style.display = 'flex'; row.style.gap = '12px'; row.style.marginTop = '10px';
@@ -2219,7 +2219,7 @@ const Stage3 = {
   }
 };
 /* ════════════════════════════════════════════════════════════════
-   STAGE 4 — CORNE-TROLL TOWER (Layer 3 FN)
+   STAGE 4 — CORNE-TROL TOWER (Layer 3 FN)
    F-key tags select inbound planes, Tab cycles duplicates,
    Enter clears the closest one to land. Optional FN-numpad
    heading prompts in 4-4/4-5.
@@ -2236,7 +2236,7 @@ const Stage4 = {
 
   start(lv) {
     this.lv = lv; this.def = lv.def;
-    const s = UI.clear(`${lv.def.id} · CORNE-TROLL TOWER`);
+    const s = UI.clear(`${lv.def.id} · CORNE-TROL TOWER`);
     const w = el('div', 'tw-wrap');
     w.append(el('div', 'tw-hud',
       `<span>LANDED <b id="t-land">0/${this.def.land}</b></span>

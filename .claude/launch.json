@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "cornetroll",
+      "name": "cornetrol",
       "runtimeExecutable": "node",
       "runtimeArgs": ["tools/serve.js", "8123"],
       "port": 8123

@@ -1,8 +1,8 @@
-# Corne-troll Tower
+# Corne-trol Tower
 
 A keyboard-learning game for a **46-key Corne split keyboard** running the
 **Dvorak Programmer keymap (v1)**. You climb an airport career ladder — typing
-cadet → X-ray officer → maintenance engineer → air traffic controller — and each
+cadet → X-ray officer → maintenance engineer → air traffic controler — and each
 job trains one keymap layer while reusing the ones before it:
 
 | Stage | Job | Trains |
@@ -10,7 +10,7 @@ job trains one keymap layer while reusing the ones before it:
 | 1 — Flight School | Typing cadet | Layer 0 (Dvorak base) |
 | 2 — Security Checkpoint | X-ray officer | Layer 1 (NAV & mouse) |
 | 3 — Maintenance Bay | Software engineer | Layer 2 (SYM) |
-| 4 — Corne-troll Tower | Air traffic controller | Layer 3 (FN) |
+| 4 — Corne-trol Tower | Air traffic controler | Layer 3 (FN) |
 
 ## Play
 

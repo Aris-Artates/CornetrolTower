@@ -7,7 +7,7 @@ const Screens = {
     Guide.idle();
     const w = el('div', 'wrap');
     w.append(el('div', 'menu-hero',
-      `<div class="tower">Corne-troll Tower</div>
+      `<div class="tower">Corne-trol Tower</div>
        <div class="tag">A 46-key career · Dvorak Programmer keymap</div>`));
     const list = el('div', 'menu-list');
     const mk = (label, fn) => { const b = el('button', 'btn', label); b.onclick = fn; return b; };
@@ -64,8 +64,8 @@ const Screens = {
     const w = el('div', 'wrap');
     w.append(el('h1', 'board', 'Credits'));
     w.append(el('div', null,
-      `<p><b>Corne-troll Tower</b> — a keyboard-learning game for the 46-key Corne split board.</p>
-       <p class="subtle">Game design &amp; code — the Corne-troll Tower crew<br>
+      `<p><b>Corne-trol Tower</b> — a keyboard-learning game for the 46-key Corne split board.</p>
+       <p class="subtle">Game design &amp; code — the Corne-trol Tower crew<br>
        Keymap — Dvorak Programmer v1 (see the in-game guide)<br>
        Built with plain HTML, CSS and JavaScript. No planes were harmed.</p>`));
     const row = el('div', null); row.style.display = 'flex'; row.style.gap = '12px'; row.style.marginTop = '10px';

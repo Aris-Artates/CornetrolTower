@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   STAGE 4 — CORNE-TROLL TOWER (Layer 3 FN)
+   STAGE 4 — CORNE-TROL TOWER (Layer 3 FN)
    F-key tags select inbound planes, Tab cycles duplicates,
    Enter clears the closest one to land. Optional FN-numpad
    heading prompts in 4-4/4-5.
@@ -16,7 +16,7 @@ const Stage4 = {
 
   start(lv) {
     this.lv = lv; this.def = lv.def;
-    const s = UI.clear(`${lv.def.id} · CORNE-TROLL TOWER`);
+    const s = UI.clear(`${lv.def.id} · CORNE-TROL TOWER`);
     const w = el('div', 'tw-wrap');
     w.append(el('div', 'tw-hud',
       `<span>LANDED <b id="t-land">0/${this.def.land}</b></span>
