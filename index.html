@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corne-troll Tower</title>
+<style>
+:root{
+  --bg:#0b0f1a; --panel:#121a2b; --panel-2:#0e1524; --line:#24324f;
+  --amber:#ffb703; --amber-soft:#ffd166; --text:#e8edf7; --dim:#93a0b8;
+  --green:#3ddc84; --red:#ff5d5d; --blue:#57b3ff; --violet:#b586ff;
+  --board:#05070d;
+  --mono:'Cascadia Mono','Consolas','Menlo',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.45 'Segoe UI',system-ui,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit}
+#app{display:flex;flex-direction:column;height:100%}
+
+/* ── Top bar ─────────────────────────────────────────── */
+#topbar{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:8px 16px;
+  background:var(--board);border-bottom:2px solid var(--line);font-family:var(--mono)}
+#topbar .brand{color:var(--amber);letter-spacing:.18em;font-weight:700;text-transform:uppercase;font-size:14px;white-space:nowrap}
+#topbar .crumb{color:var(--dim);font-size:13px;letter-spacing:.08em}
+#topbar .spacer{flex:1}
+#topbar .hud{display:flex;gap:16px;font-size:13px;color:var(--amber-soft)}
+#topbar .hud b{color:var(--text)}
+.stripe{height:6px;background:repeating-linear-gradient(-45deg,var(--amber) 0 10px,#101010 10px 20px);opacity:.85}
+
+/* ── Screen area ─────────────────────────────────────── */
+#screen{flex:1 1 auto;overflow:auto;position:relative}
+.wrap{max-width:1060px;margin:0 auto;padding:22px 20px 40px}
+h1.board,h2.board{font-family:var(--mono);text-transform:uppercase;letter-spacing:.22em;color:var(--amber);margin:.2em 0 .5em}
+h1.board{font-size:26px}h2.board{font-size:17px}
+.subtle{color:var(--dim)}
+.btn{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:9px 18px;cursor:pointer;transition:border-color .12s, background .12s}
+.btn:hover{border-color:var(--amber);background:#182238}
+.btn.primary{background:var(--amber);color:#111;border-color:var(--amber);font-weight:600}
+.btn.primary:hover{background:var(--amber-soft)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* ── Main menu ───────────────────────────────────────── */
+.menu-hero{font-family:var(--mono);text-align:center;margin:48px 0 8px}
+.menu-hero .tower{font-size:44px;color:var(--amber);letter-spacing:.14em;text-transform:uppercase;text-shadow:0 0 24px rgba(255,183,3,.25)}
+.menu-hero .tag{color:var(--dim);letter-spacing:.3em;font-size:12px;text-transform:uppercase;margin-top:6px}
+.menu-list{display:flex;flex-direction:column;gap:12px;max-width:420px;margin:34px auto}
+.menu-list .btn{font-family:var(--mono);letter-spacing:.25em;text-transform:uppercase;text-align:center;
+  font-size:17px;padding:15px}
+.storage-note{color:var(--red);text-align:center;font-size:12px}
+
+/* ── Cards (stages / levels) ─────────────────────────── */
+.cardgrid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));margin-top:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;
+  transition:border-color .12s;position:relative;min-height:118px}
+.card:hover:not(.locked){border-color:var(--amber)}
+.card.locked{opacity:.55;cursor:default}
+.card .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--amber);text-transform:uppercase}
+.card h3{margin:4px 0 6px;font-size:16px}
+.card .meta{font-size:12.5px;color:var(--dim)}
+.card .best{font-size:12.5px;color:var(--green);margin-top:6px;font-family:var(--mono)}
+.card .lockline{font-size:12px;color:var(--amber-soft);margin-top:6px}
+.card .done{position:absolute;top:10px;right:12px;color:var(--green);font-size:15px}
+.profilebar{margin-top:26px;padding:12px 16px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+  font-family:var(--mono);font-size:13px;display:flex;gap:26px;flex-wrap:wrap;color:var(--dim)}
+.profilebar b{color:var(--amber-soft)}
+
+/* ── Settings ────────────────────────────────────────── */
+.set-row{display:flex;align-items:center;gap:14px;margin:16px 0;max-width:440px}
+.set-row label{width:110px;color:var(--dim);font-family:var(--mono);font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.set-row input[type=range]{flex:1;accent-color:var(--amber)}
+.set-row .val{width:42px;text-align:right;font-family:var(--mono);color:var(--amber-soft)}
+/* Secret unlock-all: invisible at rest, real focusable element in tab order */
+#secret-unlock{display:block;width:260px;height:30px;margin:26px 0 0;background:transparent;border:none;
+  color:transparent;cursor:default;border-radius:6px}
+#secret-unlock:hover{cursor:pointer;outline:1px dashed rgba(255,183,3,.55)}
+#secret-unlock:focus-visible{outline:2px solid var(--blue);outline-offset:2px;color:var(--dim)}
+
+/* ── Toast / modal ───────────────────────────────────── */
+#toast{position:fixed;top:14px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px}
+.toast{background:#152038;border:1px solid var(--amber);border-radius:8px;padding:10px 16px;font-size:13.5px;
+  box-shadow:0 6px 20px rgba(0,0,0,.5);animation:tin .18s ease-out}
+@keyframes tin{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+.modal-veil{position:fixed;inset:0;background:rgba(5,7,13,.72);z-index:50;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 26px;min-width:340px;max-width:560px;
+  box-shadow:0 14px 50px rgba(0,0,0,.6)}
+.modal h3{font-family:var(--mono);letter-spacing:.18em;text-transform:uppercase;margin:0 0 12px}
+.modal h3.pass{color:var(--green)} .modal h3.fail{color:var(--red)}
+.statrows{margin:10px 0;font-family:var(--mono);font-size:13.5px}
+.statrows div{display:flex;justify-content:space-between;gap:30px;padding:3px 0;border-bottom:1px dashed #22304d}
+.statrows div span:last-child{color:var(--amber-soft)}
+.modal .acts{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+.gate-note{font-size:12.5px;color:var(--dim);margin-top:8px}
+
+/* ── Corne guide ─────────────────────────────────────── */
+#guide{flex:0 0 auto;background:var(--board);border-top:2px solid var(--line);font-family:var(--mono);z-index:20}
+#guide .g-head{display:flex;align-items:center;gap:12px;padding:5px 14px;cursor:pointer;user-select:none}
+#guide .g-head .g-title{color:var(--amber);font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+#guide .g-head .g-layer{color:var(--blue);font-size:12px;letter-spacing:.1em}
+#guide .g-head .g-hint{flex:1;color:var(--text);font-size:13px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#guide .g-head .g-fold{color:var(--dim);font-size:12px}
+#guide .g-body{display:flex;justify-content:center;gap:46px;padding:6px 10px 12px}
+#guide.folded .g-body{display:none}
+.kb-half{display:flex;flex-direction:column;gap:4px}
+.kb-row{display:flex;gap:4px}
+.kb-thumbs{display:flex;gap:4px;margin-top:4px}
+.kb-half.left .kb-thumbs{justify-content:flex-end;margin-right:2px}
+.kb-half.right .kb-thumbs{justify-content:flex-start;margin-left:2px}
+.key{width:44px;height:40px;border:1px solid #2c3a5c;border-radius:6px;background:#101828;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:12px;line-height:1.05;position:relative;color:var(--text)}
+.key .sub{font-size:8.5px;color:var(--violet);margin-top:1px}
+.key.blank{opacity:.28}
+.key.transparent{color:var(--dim);opacity:.55}
+.key.need{border-color:var(--amber);background:#2b230a;color:var(--amber);box-shadow:0 0 10px rgba(255,183,3,.55);z-index:1}
+.key.need .sub{color:var(--amber-soft)}
+.key.hold{border-color:var(--green);background:#0c2317;color:var(--green);box-shadow:0 0 10px rgba(61,220,132,.5)}
+.key.thumb{width:52px;border-radius:14px}
+
+/* ── Stage 1: typing ─────────────────────────────────── */
+.t-stage{max-width:900px;margin:0 auto;padding:18px 20px}
+.t-meters{display:flex;gap:26px;font-family:var(--mono);font-size:14px;margin:10px 0;color:var(--dim)}
+.t-meters b{color:var(--amber);font-size:20px}
+.t-phase{display:flex;gap:8px;margin:8px 0 14px}
+.t-phase .btn{font-size:12.5px;padding:5px 12px}
+.t-phase .btn.on{border-color:var(--amber);color:var(--amber)}
+.t-text{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:22px 26px;
+  font-family:var(--mono);font-size:22px;line-height:2;letter-spacing:.03em;min-height:150px;user-select:none;white-space:pre-wrap;word-break:break-word}
+.tok{border-radius:3px;padding:0 1px}
+.tok.done{color:#5a9b74}
+.tok.cur{background:var(--amber);color:#111;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{background:#6b5310;color:var(--amber)}}
+.tok.err{color:var(--red);text-decoration:underline}
+.tok.wrongchar{color:#fff;background:var(--red);border-radius:3px}
+.tok.special{border:1px solid var(--blue);color:var(--blue);font-size:14px;padding:2px 7px;border-radius:6px;margin:0 3px}
+.tok.special.cur{background:var(--blue);color:#111;animation:none}
+.tok.special.done{opacity:.45}
+.t-note{color:var(--dim);font-size:13px;margin-top:10px}
+
+/* ── Stage 2: x-ray ──────────────────────────────────── */
+.xr-wrap{display:flex;flex-direction:column;height:100%;padding:10px 16px 6px;gap:8px}
+.xr-hud{display:flex;gap:22px;font-family:var(--mono);font-size:13px;color:var(--dim);align-items:center}
+.xr-hud b{color:var(--amber)}
+.xr-monitor{flex:1;position:relative;background:#071022;border:2px solid var(--line);border-radius:12px;overflow:hidden;min-height:300px}
+.xr-monitor::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(87,179,255,.045) 0 2px,transparent 2px 4px)}
+.xr-belt{position:absolute;left:0;right:0;bottom:0;height:26px;background:repeating-linear-gradient(90deg,#141414 0 26px,#1f1f1f 26px 52px);border-top:2px solid #333}
+.bag{position:absolute;border:2px solid #3a4d79;border-radius:14px;background:rgba(38,64,120,.35)}
+.bag .bagtag{position:absolute;top:-19px;left:6px;font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.1em}
+.xitem{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none;line-height:1}
+.xitem .glyph{font-size:26px;filter:drop-shadow(0 0 5px rgba(255,255,255,.35))}
+.xitem.red .glyph{filter:drop-shadow(0 0 6px rgba(255,93,93,.9))}
+.xitem .badge{font-size:10px;margin-top:2px}
+.xitem.red .badge{color:var(--red)} .xitem.safe .badge{color:#dfe7f5}
+.xitem.tagged{outline:2px solid var(--green);border-radius:8px;opacity:.55;pointer-events:none}
+.xitem.falsetag{outline:2px dashed var(--red);border-radius:8px}
+.xr-report{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--amber);border-radius:10px;padding:9px 14px;font-family:var(--mono)}
+.xr-report input{flex:0 0 320px;background:#0a1120;border:1px solid var(--line);border-radius:6px;color:var(--amber-soft);
+  font:16px var(--mono);padding:6px 10px}
+.xr-report input:focus{outline:1px solid var(--amber)}
+.xr-panel{position:absolute;top:24px;left:50%;transform:translateX(-50%);width:420px;background:var(--panel);
+  border:1px solid var(--amber);border-radius:12px;padding:14px 18px;z-index:5;box-shadow:0 12px 40px rgba(0,0,0,.65)}
+.xr-panel h4{margin:0 0 8px;font-family:var(--mono);letter-spacing:.15em;text-transform:uppercase;color:var(--amber);font-size:13px}
+.xr-panel .entry{display:flex;align-items:center;gap:10px;padding:6px 9px;border-radius:7px;font-family:var(--mono);font-size:14px}
+.xr-panel .entry.sel{background:#22304d;outline:1px solid var(--blue)}
+.xr-panel .entry .eglyph{font-size:19px}
+.xr-panel .entry.redE .ename{color:var(--red)} .xr-panel .entry.safeE .ename{color:#dfe7f5}
+.xr-panel .entry.doneE{opacity:.45;text-decoration:line-through}
+.xr-panel .entry input{margin-left:auto;width:170px;background:#0a1120;border:1px solid var(--line);border-radius:5px;
+  color:var(--amber-soft);font:13px var(--mono);padding:3px 7px}
+.xr-panel .phint{color:var(--dim);font-size:11.5px;margin-top:8px}
+
+/* ── Stage 3: IDE ────────────────────────────────────── */
+.ide{display:grid;grid-template-columns:170px 1fr 320px;grid-template-rows:1fr 148px;gap:8px;height:100%;padding:10px 14px 6px}
+.ide .tree{grid-row:1/3;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:var(--mono);font-size:13px;overflow:auto}
+.ide .tree .fitem{padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--dim)}
+.ide .tree .fitem:hover{color:var(--text)} .ide .tree .fitem.open{color:var(--amber);background:#1b2540}
+.ide .center{display:flex;gap:8px;min-width:0;min-height:0}
+.pane{flex:1;display:flex;flex-direction:column;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;min-width:0;overflow:hidden}
+.pane.activePane{border-color:var(--blue)}
+.pane .tabs{display:flex;gap:2px;background:#0a101f;padding:4px 6px 0;font-family:var(--mono);font-size:12px}
+.pane .tabs .tab{padding:4px 12px;border-radius:6px 6px 0 0;cursor:pointer;color:var(--dim);background:#0e1524}
+.pane .tabs .tab.on{color:var(--amber);background:var(--panel-2);border:1px solid var(--line);border-bottom:none}
+.edwrap{position:relative;flex:1;min-height:0}
+.edwrap pre,.edwrap textarea{margin:0;position:absolute;inset:0;padding:10px 12px;font:14px/1.5 var(--mono);
+  white-space:pre;overflow:auto;border:none;letter-spacing:normal;tab-size:4}
+.edwrap pre{color:transparent;pointer-events:none;z-index:0}
+.edwrap pre .ok{background:rgba(61,220,132,.10)}
+.edwrap pre .bad{background:rgba(255,93,93,.32)}
+.edwrap textarea{background:transparent;color:var(--text);resize:none;z-index:1;outline:none;caret-color:var(--amber)}
+.ide .ticketcol{display:flex;flex-direction:column;gap:8px;min-height:0}
+.ticket{background:var(--panel);border:1px solid var(--amber);border-radius:10px;padding:10px 14px;font-size:13px}
+.ticket .tid{font-family:var(--mono);color:var(--amber);letter-spacing:.12em;font-size:11.5px;text-transform:uppercase}
+.ticket .brief{margin-top:5px;color:var(--text)}
+.targetview{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;overflow:auto;min-height:0}
+.targetview pre{margin:0;padding:10px 12px;font:12.5px/1.5 var(--mono);color:#9fd3a8;white-space:pre}
+.targetview .tv-head{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.15em;padding:6px 12px 0;text-transform:uppercase}
+.term{grid-column:2/4;background:#04070e;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;font-family:var(--mono);font-size:13px;overflow:hidden}
+.term.activePane{border-color:var(--blue)}
+.term .tout{flex:1;overflow:auto;padding:8px 12px;color:#9fd3a8;white-space:pre-wrap}
+.term .tline{display:flex;gap:8px;padding:4px 12px;border-top:1px solid var(--line)}
+.term .tline input{flex:1;background:transparent;border:none;color:var(--amber-soft);font:13px var(--mono);outline:none}
+.ide-hud{grid-column:1/4;display:flex;gap:22px;font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+
+/* ── Stage 4: tower ──────────────────────────────────── */
+.tw-wrap{display:flex;flex-direction:column;height:100%;padding:10px 16px 6px;gap:8px}
+.tw-hud{display:flex;gap:22px;font-family:var(--mono);font-size:13px;color:var(--dim);align-items:center}
+.tw-hud b{color:var(--amber)}
+.radar{flex:1;position:relative;background:radial-gradient(circle at 50% 88%,#07240f 0%,#03140a 65%,#020c06 100%);
+  border:2px solid #1d3a26;border-radius:12px;overflow:hidden;min-height:320px}
+.radar .ring{position:absolute;border:1px solid rgba(61,220,132,.14);border-radius:50%;pointer-events:none}
+.runway{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:34px;height:110px;background:#222;
+  border:2px solid #555;border-radius:4px}
+.runway::before{content:'';position:absolute;left:50%;top:6px;bottom:6px;width:3px;transform:translateX(-50%);
+  background:repeating-linear-gradient(0deg,#ddd 0 9px,transparent 9px 18px)}
+.runway.busy{border-color:var(--amber)}
+.plane{position:absolute;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-50%);z-index:2}
+.plane .ftag{font-family:var(--mono);font-size:11.5px;background:#12233a;border:1px solid var(--blue);color:var(--blue);
+  border-radius:5px;padding:1px 6px;margin-bottom:2px;letter-spacing:.06em}
+.plane .icon{font-size:20px;transform:rotate(var(--hdg,0deg))}
+.plane .fuel{width:34px;height:4px;background:#333;border-radius:2px;margin-top:2px;overflow:hidden}
+.plane .fuel i{display:block;height:100%;background:var(--green)}
+.plane .fuel i.low{background:var(--red)}
+.plane .callsign{font-family:var(--mono);font-size:9px;color:var(--dim)}
+.plane.candidate .ftag{border-color:var(--amber);color:var(--amber)}
+.plane.sel .ftag{background:var(--amber);color:#111;border-color:var(--amber)}
+.plane.sel .icon{filter:drop-shadow(0 0 8px rgba(255,183,3,.9))}
+.plane.closest::after{content:'';position:absolute;inset:-7px -4px;border:1px dashed rgba(61,220,132,.5);border-radius:10px;pointer-events:none}
+.plane.landing{opacity:.85}
+.tw-msg{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:13px;
+  color:var(--amber);background:rgba(5,7,13,.8);border:1px solid var(--line);padding:5px 14px;border-radius:8px;z-index:6}
+.tw-numpad{position:absolute;bottom:130px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--amber);
+  border-radius:10px;padding:10px 16px;font-family:var(--mono);z-index:6;text-align:center}
+.tw-numpad .np-in{font-size:20px;letter-spacing:.3em;color:var(--amber);min-height:26px}
+
+/* ── Briefing overlay ────────────────────────────────── */
+.brief-veil{position:absolute;inset:0;background:rgba(5,7,13,.82);z-index:10;display:flex;align-items:center;justify-content:center}
+.briefing{background:var(--panel);border:1px solid var(--amber);border-radius:12px;padding:22px 28px;max-width:560px}
+.briefing h3{font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
+.briefing ul{margin:8px 0;padding-left:20px;color:var(--dim);font-size:13.5px}
+.briefing ul li{margin:4px 0}
+.briefing kbd{font-family:var(--mono);background:#0a1120;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:12px;color:var(--amber-soft)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"></div>
+  <div class="stripe"></div>
+  <div id="screen"></div>
+  <div id="guide"></div>
+  <div id="toast"></div>
+</div>
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════════
+   KEYMAP — 46-KEY CORNE, DVORAK PROGRAMMER (v1)
+   Encoded verbatim from the spec appendix. Single source of truth:
+   every diagram, hint and drill reads from this structure.
+   Cell: { l:label, k:output (KeyboardEvent.key), s:shifted output,
+           sub:home-row-mod label, hold:layer this thumb activates,
+           blank:true (no-op), trans:true (▽ transparent) }
+   ════════════════════════════════════════════════════════════════ */
+const KEYMAP = {
+  layerNames: ['BASE', 'NAV & MOUSE', 'SYM', 'FN'],
+  holdDesc: { NAV: 'left thumb · inner key', SYM: 'right thumb · middle key', FN: 'right thumb · outer key' },
+  layers: [
+    { // ── LAYER 0 — BASE (Dvorak) ──
+      left: [
+        [{l:'Tab',k:'Tab'},{l:"'",k:"'",s:'"'},{l:',',k:',',s:'<'},{l:'.',k:'.',s:'>'},{l:'P',k:'p'},{l:'Y',k:'y'}],
+        [{l:'Esc',k:'Escape'},{l:'A',k:'a',sub:'GUI'},{l:'O',k:'o',sub:'Alt'},{l:'E',k:'e',sub:'Ctl'},{l:'U',k:'u',sub:'Sft'},{l:'I',k:'i'}],
+        [{l:'Sft'},{l:';',k:';',s:':'},{l:'Q',k:'q'},{l:'J',k:'j'},{l:'K',k:'k'},{l:'X',k:'x'}]
+      ],
+      right: [
+        [{l:'F',k:'f'},{l:'G',k:'g'},{l:'C',k:'c'},{l:'R',k:'r'},{l:'L',k:'l'},{l:'/',k:'/',s:'?'}],
+        [{l:'D',k:'d'},{l:'H',k:'h',sub:'Sft'},{l:'T',k:'t',sub:'Ctl'},{l:'N',k:'n',sub:'Alt'},{l:'S',k:'s',sub:'GUI'},{l:'-',k:'-',s:'_'}],
+        [{l:'B',k:'b'},{l:'M',k:'m'},{l:'W',k:'w'},{l:'V',k:'v'},{l:'Z',k:'z'},{l:'Sft'}]
+      ],
+      leftThumbs: [{l:'NAV',hold:'NAV'},{l:'Spc/Sft',k:' '},{l:'Bsp',k:'Backspace'}],
+      rightThumbs: [{l:'Ent',k:'Enter'},{l:'SYM',hold:'SYM'},{l:'FN',hold:'FN'}]
+    },
+    { // ── LAYER 1 — NAV & MOUSE (hold left thumb / NAV) ──
+      left: [
+        [{trans:true},{l:'RC',k:'RC'},{l:'MU',k:'MU'},{l:'LC',k:'LC'},{l:'WU',k:'WU'},{blank:true}],
+        [{trans:true},{l:'ML',k:'ML'},{l:'MD',k:'MD'},{l:'MR',k:'MR'},{l:'WD',k:'WD'},{blank:true}],
+        [{trans:true},{blank:true},{l:'WL',k:'WL'},{l:'WR',k:'WR'},{blank:true},{blank:true}]
+      ],
+      right: [
+        [{l:'Undo',k:'Undo'},{l:'Redo',k:'Redo'},{l:'Cut',k:'Cut'},{l:'Copy',k:'Copy'},{l:'Pste',k:'Paste'},{trans:true}],
+        [{l:'Home',k:'Home'},{l:'←',k:'ArrowLeft'},{l:'↓',k:'ArrowDown'},{l:'↑',k:'ArrowUp'},{l:'→',k:'ArrowRight'},{l:'End',k:'End'}],
+        [{l:'PgUp',k:'PageUp'},{l:'PgDn',k:'PageDown'},{l:'MC',k:'MC'},{blank:true},{blank:true},{trans:true}]
+      ],
+      leftThumbs: [{l:'▽▽▽',held:'NAV'},{l:'LC',k:'LC'},{l:'RC',k:'RC'}],
+      rightThumbs: [{l:'Ent',k:'Enter'},{trans:true},{trans:true}]
+    },
+    { // ── LAYER 2 — SYM (hold right thumb / SYM) ──
+      left: [
+        [{l:'~',k:'~'},{l:'!',k:'!'},{l:'@',k:'@'},{l:'#',k:'#'},{l:'$',k:'$'},{l:'%',k:'%'}],
+        [{trans:true},{l:'(',k:'(',sub:'GUI'},{l:'{',k:'{',sub:'Alt'},{l:'[',k:'[',sub:'Ctl'},{l:'<',k:'<',sub:'Sft'},{l:'=',k:'='}],
+        [{trans:true},{l:'_',k:'_'},{l:':',k:':'},{l:';',k:';'},{l:'?',k:'?'},{l:'/',k:'/'}]
+      ],
+      right: [
+        [{l:'^',k:'^'},{l:'&',k:'&'},{l:'*',k:'*'},{l:'\\',k:'\\'},{l:'|',k:'|'},{l:'`',k:'`'}],
+        [{l:'+',k:'+'},{l:'>',k:'>',sub:'Sft'},{l:')',k:')',sub:'Ctl'},{l:'}',k:'}',sub:'Alt'},{l:']',k:']',sub:'GUI'},{l:'"',k:'"'}],
+        [{l:'-',k:'-'},{l:'&',k:'&'},{l:'|',k:'|'},{l:'.',k:'.'},{l:',',k:','},{trans:true}]
+      ],
+      leftThumbs: [{l:'Spc',k:' '},{trans:true},{trans:true}],
+      rightThumbs: [{trans:true},{l:'▽▽▽',held:'SYM'},{trans:true}]
+    },
+    { // ── LAYER 3 — FN (hold right thumb / FN) ──
+      left: [
+        [{l:'Boot'},{l:'F1',k:'F1'},{l:'F2',k:'F2'},{l:'F3',k:'F3'},{l:'F4',k:'F4'},{l:'F5',k:'F5'}],
+        [{trans:true},{l:'F6',k:'F6',sub:'GUI'},{l:'F7',k:'F7',sub:'Alt'},{l:'F8',k:'F8',sub:'Ctl'},{l:'F9',k:'F9',sub:'Sft'},{l:'F10',k:'F10'}],
+        [{trans:true},{l:'F11',k:'F11'},{l:'F12',k:'F12'},{l:'Prev'},{l:'Play'},{l:'Next'}]
+      ],
+      right: [
+        [{l:'/',k:'/'},{l:'7',k:'7'},{l:'8',k:'8'},{l:'9',k:'9'},{l:'-',k:'-'},{l:'Boot'}],
+        [{l:'*',k:'*'},{l:'4',k:'4',sub:'Sft'},{l:'5',k:'5',sub:'Ctl'},{l:'6',k:'6',sub:'Alt'},{l:'+',k:'+',sub:'GUI'},{l:'=',k:'='}],
+        [{l:'0',k:'0'},{l:'1',k:'1'},{l:'2',k:'2'},{l:'3',k:'3'},{l:'.',k:'.'},{trans:true}]
+      ],
+      leftThumbs: [{l:'Vol-'},{l:'Mute'},{l:'Vol+'}],
+      rightThumbs: [{l:'0',k:'0'},{l:'▽▽▽',held:'FN'},{trans:true}]
+    }
+  ]
+};
+
+/* ── Position lookup tables ─────────────────────────────────────── */
+const KEY = (() => {
+  // plainMaps[layer]: char/key -> pos ; shiftMap: shifted base output -> pos(+shift)
+  const plainMaps = [new Map(), new Map(), new Map(), new Map()];
+  const shiftMap = new Map();
+
+  KEYMAP.layers.forEach((layer, li) => {
+    const scan = (cells, side, row) => cells.forEach((c, col) => {
+      const pos = { layer: li, side, row, col };
+      if (c.k !== undefined && !plainMaps[li].has(c.k)) plainMaps[li].set(c.k, pos);
+      if (li === 0 && c.s && !shiftMap.has(c.s)) shiftMap.set(c.s, { ...pos, shift: true });
+      if (li === 0 && c.k && /^[a-z]$/.test(c.k)) shiftMap.set(c.k.toUpperCase(), { ...pos, shift: true });
+    });
+    layer.left.forEach((r, ri) => scan(r, 'L', ri));
+    layer.right.forEach((r, ri) => scan(r, 'R', ri));
+    scan(layer.leftThumbs, 'L', 'T');
+    scan(layer.rightThumbs, 'R', 'T');
+  });
+
+  const FINGERS_L = ['pinky (outer)', 'pinky', 'ring', 'middle', 'index', 'index (inner)'];
+  const FINGERS_R = ['index (inner)', 'index', 'middle', 'ring', 'pinky', 'pinky (outer)'];
+
+  function fingerOf(pos) {
+    if (pos.row === 'T') return 'thumb';
+    return pos.side === 'L' ? FINGERS_L[pos.col] : FINGERS_R[pos.col];
+  }
+  function sideWord(pos) { return pos.side === 'L' ? 'left' : 'right'; }
+
+  // Find a key/char. Search order: base plain → SYM → FN → base+Shift.
+  function find(x) {
+    for (const li of [0, 2, 3]) if (plainMaps[li].has(x)) return plainMaps[li].get(x);
+    if (shiftMap.has(x)) return shiftMap.get(x);
+    // NAV-only keys (arrows, Home/End, PgUp/PgDn, clipboard, mouse)
+    if (plainMaps[1].has(x)) return plainMaps[1].get(x);
+    return null;
+  }
+
+  function labelAt(pos) {
+    const layer = KEYMAP.layers[pos.layer];
+    const half = pos.side === 'L' ? layer.left : layer.right;
+    const cell = pos.row === 'T'
+      ? (pos.side === 'L' ? layer.leftThumbs : layer.rightThumbs)[pos.col]
+      : half[pos.row][pos.col];
+    return cell.l || '';
+  }
+
+  // The HRM Shift on the hand OPPOSITE the target key: U (left index) / H (right index)
+  function hrmShiftFor(pos) {
+    return pos.side === 'L'
+      ? { layer: 0, side: 'R', row: 1, col: 1, name: 'H (right index)' }
+      : { layer: 0, side: 'L', row: 1, col: 4, name: 'U (left index)' };
+  }
+
+  // Build a full hint for a character or named key.
+  // Returns {layer, needs:[pos], holdThumb:pos|null, shiftKey:pos|null, text}
+  function hint(x, displayLabel) {
+    const pos = find(x);
+    if (!pos) return null;
+    const lbl = displayLabel || labelAt(pos);
+    const holds = { 1: 'NAV', 2: 'SYM', 3: 'FN' }[pos.layer] || null;
+    let holdThumb = null, text = '';
+    if (holds) {
+      const layer = KEYMAP.layers[pos.layer];
+      const lt = layer.leftThumbs.findIndex(c => c.held === holds);
+      const rt = layer.rightThumbs.findIndex(c => c.held === holds);
+      holdThumb = lt >= 0 ? { layer: pos.layer, side: 'L', row: 'T', col: lt }
+                          : { layer: pos.layer, side: 'R', row: 'T', col: rt };
+      text = `Hold ${holds} (${KEYMAP.holdDesc[holds]}) · ${sideWord(pos)} ${fingerOf(pos)} → ${lbl}`;
+    } else if (pos.shift) {
+      const sh = hrmShiftFor(pos);
+      text = `Hold Shift (${sh.name} or outer Sft) · ${sideWord(pos)} ${fingerOf(pos)} → ${lbl}`;
+      return { layer: 0, needs: [pos], holdThumb: null, shiftKey: sh, text };
+    } else {
+      text = `${sideWord(pos)[0].toUpperCase() + sideWord(pos).slice(1)} ${fingerOf(pos)} → ${lbl}`;
+    }
+    return { layer: pos.layer, needs: [pos], holdThumb, shiftKey: null, text };
+  }
+
+  return { find, hint, labelAt, fingerOf, sideWord, hrmShiftFor };
+})();
+/* ════════════════════════════════════════════════════════════════
+   CONFIG — every numeric difficulty value lives here (tunable).
+   ════════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  storageKey: 'cornetroll-tower-save-v1',
+  links: { discord: 'https://discord.gg/your-server-here', facebook: 'https://facebook.com/your-page-here' },
+  audio: { master: 0.8, music: 0.35, sfx: 0.7 },
+
+  stages: [
+    { num: 1, title: 'Flight School',       job: 'Typing cadet',          layer: 'Layer 0 — Dvorak base',  reuse: '—' },
+    { num: 2, title: 'Security Checkpoint', job: 'X-ray officer',         layer: 'Layer 1 — NAV & mouse',  reuse: 'Layer 0' },
+    { num: 3, title: 'Maintenance Bay',     job: 'Software engineer',     layer: 'Layer 2 — SYM',          reuse: 'Layers 0, 1' },
+    { num: 4, title: 'Corne-troll Tower',   job: 'Air traffic controller',layer: 'Layer 3 — FN',           reuse: 'Layers 0, 1' }
+  ],
+
+  /* ── Stage 1 ──────────────────────────────────────────────────── */
+  stage1: [
+    { id:'1-1', name:'Home row keys',  gate:{wpm:12, acc:92}, gen:'bursts',    testChars:90,  strict:false,
+      newKeys:['a','o','e','u','i','d','h','t','n','s'] },
+    { id:'1-2', name:'Home row words', gate:{wpm:18, acc:92}, gen:'homeWords', testChars:110, strict:false, newKeys:[] },
+    { id:'1-3', name:'Top row',        gate:{wpm:20, acc:93}, gen:'topWords',  testChars:130, strict:false,
+      newKeys:["'",',','.','p','y','f','g','c','r','l'] },
+    { id:'1-4', name:'Bottom row',     gate:{wpm:22, acc:93}, gen:'botWords',  testChars:140, strict:false,
+      newKeys:[';','q','j','k','x','b','m','w','v','z'] },
+    { id:'1-5', name:'Full alphabet + capitals', gate:{wpm:25, acc:94}, gen:'pangrams', testChars:160, strict:true,
+      newKeys:['A','U','H','S'] },   // warm-up demos HRM-shift capitals
+    { id:'1-6', name:'Graduation exam', gate:{wpm:28, acc:95}, gen:'exam', testChars:180, strict:true,
+      newKeys:['Tab','Escape','-','/'] }
+  ],
+
+  /* ── Stage 2 ──────────────────────────────────────────────────── */
+  stage2: [
+    { id:'2-1', name:'First shift',    bags:6,  beltSpeed:34, itemsPerBag:[2,3], maxFalse:2, nameAcc:85, time:150, pool:'short', lookalikes:false, containerDepth:0 },
+    { id:'2-2', name:'Decoy trays',    bags:8,  beltSpeed:40, itemsPerBag:[3,4], maxFalse:2, nameAcc:88, time:170, pool:'short', lookalikes:true,  containerDepth:0 },
+    { id:'2-3', name:'Open that bag',  bags:8,  beltSpeed:38, itemsPerBag:[3,4], maxFalse:2, nameAcc:88, time:210, pool:'short', lookalikes:true,  containerDepth:1 },
+    { id:'2-4', name:'Deep inspection',bags:9,  beltSpeed:42, itemsPerBag:[3,4], maxFalse:2, nameAcc:88, time:240, pool:'long',  lookalikes:true,  containerDepth:2 },
+    { id:'2-5', name:'Rush hour',      bags:12, beltSpeed:58, itemsPerBag:[3,5], maxFalse:1, nameAcc:90, time:220, pool:'long',  lookalikes:true,  containerDepth:2 }
+  ],
+
+  /* ── Stage 3 ──────────────────────────────────────────────────── */
+  stage3: [
+    { id:'3-1', name:'One-line fixes',   time:300, firstPass:60 },
+    { id:'3-2', name:'Literal overhaul', time:360, firstPass:60 },
+    { id:'3-3', name:'Comment surgery',  time:360, firstPass:60 },
+    { id:'3-4', name:'Two-file job',     time:420, firstPass:65 },
+    { id:'3-5', name:'The full ticket',  time:540, firstPass:65 }
+  ],
+
+  /* ── Stage 4 ──────────────────────────────────────────────────── */
+  stage4: [
+    { id:'4-1', name:'First approach', tags:4,  land:6,  maxWrong:2, fuel:75, spawnEvery:6.5, speed:[7,11],  dup:false, initial:3, maxPlanes:5, reshuffle:false, numpad:false },
+    { id:'4-2', name:'Busy skies',     tags:8,  land:8,  maxWrong:2, fuel:70, spawnEvery:5.5, speed:[8,12],  dup:false, initial:4, maxPlanes:6, reshuffle:false, numpad:false },
+    { id:'4-3', name:'Twin signals',   tags:6,  land:8,  maxWrong:2, fuel:70, spawnEvery:5.0, speed:[8,13],  dup:true,  initial:4, maxPlanes:6, reshuffle:false, numpad:false },
+    { id:'4-4', name:'Full board',     tags:12, land:10, maxWrong:2, fuel:60, spawnEvery:4.2, speed:[9,14],  dup:true,  initial:5, maxPlanes:7, reshuffle:false, numpad:true },
+    { id:'4-5', name:'Storm shift',    tags:12, land:12, maxWrong:1, fuel:45, spawnEvery:3.6, speed:[10,15], dup:true,  initial:5, maxPlanes:8, reshuffle:true,  numpad:true }
+  ],
+  numpadChance: 0.35   // odds a 4-4/4-5 landing asks for a heading (FN numpad)
+};
+
+/* ════════════════════════════════════════════════════════════════
+   CONTENT — word pools and X-ray item catalogue.
+   ════════════════════════════════════════════════════════════════ */
+const CONTENT = {
+  homeLetters: ['a','o','e','u','i','d','h','t','n','s'],
+  homeWords: ('the that this then than these those and an at as is it in on no not note notes need does did dad add '
+    + 'hat hot hit sit sat set sent send tent tone tune dine nine none noon nose soon seen teen thin thus oath into '
+    + 'unto undo unit audio audit south shout house hands stand stood instead station sustain distant honest hidden '
+    + 'sudden tissue statue saint stain satin ideas').split(' '),
+  topWords: ('flight pilot cargo radar plane place clear copy type paper price group grape carpet copper proper pretty '
+    + 'culture capture picture practice gate gates depart report airport control landing captain propeller altitude '
+    + 'approach chart charter cleared hangar together another aircraft traffic capital yesterday').split(' '),
+  topPunct: ["don't","can't","isn't","they're","pilot's","gate,","clear.","hold,","taxi."],
+  botWords: ('quiz jazz jumbo cabin quick black boxes work walk wing wings winter zebra blizzard baggage buzzer jacket '
+    + 'cockpit crew maximum expect examine squawk mayday wind gusty bumpy jetway visibility very moved size dozen').split(' '),
+  pangrams: [
+    'The quick brown fox jumps over the lazy dog.',
+    'Pack my box with five dozen liquor jugs.',
+    'Jack quietly moved up front and seized the big ball of wax.',
+    'Amazingly few discotheques provide jukeboxes.',
+    'Sphinx of black quartz, judge my vow.',
+    'Delta Victor Kilo requests taxi to the active runway.',
+    'Whiskey Tango Foxtrot clears the frozen apron just by noon.',
+    'Quick zephyrs blow, vexing daft Jim.'
+  ],
+  // \t = Tab token · \x1b = Esc token · lines end with an Enter token
+  examLines: [
+    '\tcheck-in opens; the crew boards the red-eye to Quebec.',
+    '\x1babort pushback; a fuel/oil check is required now.',
+    'The tower cleared flight X-ray for the north-south runway.',
+    '\tbaggage sizers accept carry-on and checked items alike.',
+    'Pilots log take-off and touch-down times in the day/night book.',
+    '\x1bhold short; a go/no-go call comes from Dispatch.'
+  ],
+
+  /* X-ray items. Red vs safe differ by BADGE SHAPE (▲ vs ●), never color alone. */
+  xray: {
+    redShort: [
+      { name:'gun', glyph:'🔫' }, { name:'knife', glyph:'🔪' }, { name:'axe', glyph:'🪓' },
+      { name:'bomb', glyph:'💣' }, { name:'taser', glyph:'⚡' }, { name:'blade', glyph:'🗡️' },
+      { name:'flare', glyph:'🧨' }, { name:'scissors', glyph:'✂️' }, { name:'hammer', glyph:'🔨' },
+      { name:'wrench', glyph:'🔧' }, { name:'saw', glyph:'🪚' }
+    ],
+    redLong: [
+      { name:'ceramic blade', glyph:'🗡️' }, { name:'power bank', glyph:'🔋' },
+      { name:'pepper spray', glyph:'🧴' }, { name:'gas canister', glyph:'⛽' },
+      { name:'box cutter', glyph:'🔪' }, { name:'lighter fluid', glyph:'🧯' },
+      { name:'drone battery', glyph:'🔋' }, { name:'signal flare', glyph:'🧨' }
+    ],
+    safe: [
+      { name:'lipstick', glyph:'💄' }, { name:'keys', glyph:'🔑' }, { name:'wallet', glyph:'👛' },
+      { name:'phone', glyph:'📱' }, { name:'laptop', glyph:'💻' }, { name:'book', glyph:'📖' },
+      { name:'socks', glyph:'🧦' }, { name:'camera', glyph:'📷' }, { name:'lotion', glyph:'🧴' },
+      { name:'teddy bear', glyph:'🧸' }, { name:'charger', glyph:'🔌' }, { name:'headphones', glyph:'🎧' },
+      { name:'umbrella', glyph:'☂️' }, { name:'glasses', glyph:'👓' }, { name:'watch', glyph:'⌚' },
+      { name:'cookies', glyph:'🍪' }
+    ],
+    // look-alike decoys: glyphs that rhyme visually with contraband
+    lookalikeSafe: [
+      { name:'banana', glyph:'🍌' }, { name:'pen', glyph:'🖊️' }, { name:'charger', glyph:'🔌' },
+      { name:'camera', glyph:'📷' }, { name:'glasses', glyph:'👓' }, { name:'toy plane', glyph:'✈️' }
+    ],
+    containers: [
+      { name:'purse', glyph:'👜' }, { name:'pouch', glyph:'👝' },
+      { name:'backpack', glyph:'🎒' }, { name:'camera bag', glyph:'📸' }
+    ]
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   CORE — helpers, save data, audio, key capture, UI plumbing.
+   ════════════════════════════════════════════════════════════════ */
+function el(tag, cls, html) {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (html != null) d.innerHTML = html;
+  return d;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtTime(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function irnd(a, b) { return Math.floor(rnd(a, b + 1)); }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* ── Level registry ─────────────────────────────────────────────── */
+const LEVELS = (() => {
+  const list = [];
+  [CONFIG.stage1, CONFIG.stage2, CONFIG.stage3, CONFIG.stage4].forEach((arr, si) =>
+    arr.forEach((def, li) => list.push({ id: def.id, stage: si + 1, idx: li, def })));
+  return list;
+})();
+function levelAt(id) { return LEVELS.find(l => l.id === id); }
+function prevLevelId(id) { const i = LEVELS.findIndex(l => l.id === id); return i > 0 ? LEVELS[i - 1].id : null; }
+function nextLevelId(id) { const i = LEVELS.findIndex(l => l.id === id); return i >= 0 && i < LEVELS.length - 1 ? LEVELS[i + 1].id : null; }
+function gateSummary(id) {
+  const { stage, def } = levelAt(id);
+  if (stage === 1) return `${def.gate.wpm} WPM @ ${def.gate.acc}%`;
+  if (stage === 2) return `all reds · ≤${def.maxFalse} false tags · names ≥${def.nameAcc}% · ${fmtTime(def.time)}`;
+  if (stage === 3) return `all tickets exact · first-pass ≥${def.firstPass}% · ${fmtTime(def.time)}`;
+  return `land ${def.land} · ≤${def.maxWrong} wrong picks · zero fuel-outs`;
+}
+
+/* ── Save / progress ───────────────────────────────────────────── */
+const Save = {
+  canStore: true,
+  data: null,
+  load() {
+    const fresh = { settings: { ...CONFIG.audio, guideOpen: true }, unlockAll: false, levels: {} };
+    try {
+      const raw = localStorage.getItem(CONFIG.storageKey);
+      this.data = raw ? Object.assign(fresh, JSON.parse(raw)) : fresh;
+      localStorage.setItem(CONFIG.storageKey, JSON.stringify(this.data));
+    } catch (e) { this.canStore = false; this.data = fresh; }
+  },
+  persist() {
+    if (!this.canStore) return;
+    try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(this.data)); } catch (e) { this.canStore = false; }
+  },
+  rec(id) { return this.data.levels[id] || null; },
+  passed(id) { const r = this.rec(id); return !!(r && r.passed); },
+  isUnlocked(id) {
+    if (this.data.unlockAll) return true;
+    const prev = prevLevelId(id);
+    return prev === null || this.passed(prev);
+  },
+  // record a run; keep the best passed run's stats (primary: higher is better unless timeBased)
+  record(id, passed, stats, primary, timeBased) {
+    const cur = this.data.levels[id] || {};
+    cur.passed = cur.passed || passed;
+    if (passed) {
+      const old = cur.best;
+      const better = !old || (timeBased ? stats[primary] < old[primary] : stats[primary] > old[primary]);
+      if (better) cur.best = stats;
+    }
+    this.data.levels[id] = cur;
+    this.persist();
+  }
+};
+
+/* ── Audio (WebAudio; obeys Settings volumes) ───────────────────── */
+const Sound = {
+  ctx: null, masterG: null, musicG: null, sfxG: null, musicTimer: null,
+  ensure() {
+    if (this.ctx) return true;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterG = this.ctx.createGain(); this.masterG.connect(this.ctx.destination);
+      this.musicG = this.ctx.createGain(); this.musicG.connect(this.masterG);
+      this.sfxG = this.ctx.createGain(); this.sfxG.connect(this.masterG);
+      this.applyVolumes();
+    } catch (e) { return false; }
+    return true;
+  },
+  applyVolumes() {
+    if (!this.ctx) return;
+    const s = Save.data.settings;
+    this.masterG.gain.value = s.master;
+    this.musicG.gain.value = s.music;
+    this.sfxG.gain.value = s.sfx;
+  },
+  tone(freq, dur, type, vol, dest, when) {
+    if (!this.ensure()) return;
+    const t = this.ctx.currentTime + (when || 0);
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(dest || this.sfxG); o.start(t); o.stop(t + dur + 0.02);
+  },
+  tick()  { this.tone(1700, 0.045, 'square', 0.12); },
+  buzz()  { this.tone(130, 0.18, 'sawtooth', 0.22); this.tone(98, 0.22, 'sawtooth', 0.15, null, 0.02); },
+  good()  { this.tone(880, 0.09, 'sine', 0.18); this.tone(1320, 0.12, 'sine', 0.15, null, 0.07); },
+  blip()  { this.tone(520, 0.06, 'triangle', 0.14); },
+  jingle() {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.22, 'triangle', 0.18, null, i * 0.11));
+  },
+  musicStart() {
+    if (!this.ensure() || this.musicTimer) return;
+    const chords = [[196, 247, 294], [175, 220, 262], [147, 196, 247], [165, 208, 262]];
+    let bar = 0;
+    const playBar = () => {
+      const c = chords[bar % chords.length]; bar++;
+      c.forEach(f => this.tone(f, 3.6, 'sine', 0.045, this.musicG));
+      this.tone(pick(c) * 2, 0.5, 'triangle', 0.035, this.musicG, rnd(0.5, 2.5));
+    };
+    playBar();
+    this.musicTimer = setInterval(playBar, 4000);
+  },
+  musicStop() { if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; } }
+};
+
+/* ── Global key capture (ground rule 3) ─────────────────────────── */
+const Keys = {
+  ctx: null,   // { onKey(e, editable) -> true if consumed, capture: true }
+  set(c) { this.ctx = c; },
+  clear() { this.ctx = null; },
+  install() {
+    document.addEventListener('keydown', (e) => {
+      Sound.ensure();
+      if (e.defaultPrevented) return;         // an element handler already dealt with it
+      const c = this.ctx;
+      if (!c) return;
+      const t = e.target;
+      const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+      if (c.onKey && c.onKey(e, editable)) { e.preventDefault(); return; }
+      if (!c.capture) return;
+      const k = e.key;
+      // keys browsers normally steal: Tab, F1–F12, Esc — always; quick-find
+      // chars, Space-scroll, Backspace-nav, arrows/paging — outside inputs.
+      if (k === 'Tab' || k === 'Escape' || /^F\d{1,2}$/.test(k)) { e.preventDefault(); return; }
+      if (!editable && (k === "'" || k === '/' || k === ' ' || k === 'Backspace'
+          || k.startsWith('Arrow') || k === 'Home' || k === 'End' || k === 'PageUp' || k === 'PageDown')) {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('pointerdown', () => Sound.ensure(), { once: true });
+  }
+};
+
+/* ── UI plumbing ────────────────────────────────────────────────── */
+const UI = {
+  screenEl: null, topbarEl: null, toastEl: null,
+  cleanup: null,
+  init() {
+    this.screenEl = document.getElementById('screen');
+    this.topbarEl = document.getElementById('topbar');
+    this.toastEl = document.getElementById('toast');
+  },
+  setCleanup(fn) { this.cleanup = fn; },
+  clear(crumb, hud) {
+    if (this.cleanup) { try { this.cleanup(); } catch (e) {} this.cleanup = null; }
+    Keys.clear();
+    this.screenEl.innerHTML = '';
+    this.topbar(crumb, hud);
+    return this.screenEl;
+  },
+  topbar(crumb, hud) {
+    this.topbarEl.innerHTML = '';
+    const back = el('button', 'btn', '◂ Menu');
+    back.style.padding = '3px 12px'; back.style.fontSize = '12px';
+    back.onclick = () => Screens.menu();
+    this.topbarEl.append(back, el('span', 'brand', 'Corne-troll Tower'),
+      el('span', 'crumb', esc(crumb || '')), el('span', 'spacer'));
+    this.hudEl = el('div', 'hud', hud || '');
+    this.topbarEl.append(this.hudEl);
+  },
+  hud(html) { if (this.hudEl) this.hudEl.innerHTML = html; },
+  toast(msg) {
+    const t = el('div', 'toast', esc(msg));
+    this.toastEl.append(t);
+    setTimeout(() => t.remove(), 3200);
+  },
+  modal(html) {
+    const veil = el('div', 'modal-veil');
+    const box = el('div', 'modal', html);
+    veil.append(box);
+    document.body.append(veil);
+    return { veil, box, close: () => veil.remove() };
+  },
+  results({ levelId, passed, rows, onRetry, onNext, failNote }) {
+    Keys.clear();
+    const gate = gateSummary(levelId);
+    const rowsHtml = rows.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
+    const m = this.modal(
+      `<h3 class="${passed ? 'pass' : 'fail'}">${passed ? '■ SHIFT CLEARED' : '■ NOT YET'}</h3>
+       ${failNote ? `<div style="color:var(--red);font-size:13px;margin-bottom:8px">${esc(failNote)}</div>` : ''}
+       <div class="statrows">${rowsHtml}</div>
+       <div class="gate-note">Gate: ${esc(gate)}</div>
+       <div class="acts"></div>`);
+    const acts = m.box.querySelector('.acts');
+    const retry = el('button', 'btn', 'Retry');
+    retry.onclick = () => { m.close(); onRetry(); };
+    const sel = el('button', 'btn', 'Level select');
+    sel.onclick = () => { m.close(); Screens.levels(levelAt(levelId).stage); };
+    acts.append(retry, sel);
+    if (passed) {
+      const nid = nextLevelId(levelId);
+      const next = el('button', 'btn primary', nid ? `Next: ${nid} ▸` : 'Career complete!');
+      next.onclick = () => { m.close(); if (nid) Screens.play(nid); else Screens.stages(); };
+      acts.append(next);
+      Sound.jingle();
+    } else {
+      Sound.buzz();
+    }
+  },
+  // standard pre-level briefing overlay; host = positioned container
+  briefing(host, title, lines, startLabel, onStart) {
+    const veil = el('div', 'brief-veil');
+    const box = el('div', 'briefing',
+      `<h3>${esc(title)}</h3><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>`);
+    const b = el('button', 'btn primary', startLabel || 'Start shift');
+    b.onclick = () => { veil.remove(); onStart(); };
+    box.append(b);
+    veil.append(box);
+    host.append(veil);
+    setTimeout(() => b.focus(), 30);
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   GUIDE — the always-available live Corne board (ground rule 4).
+   Shows the layer currently needed, highlights the exact next
+   key(s), marks required thumb holds, labels GACS home-row mods.
+   ════════════════════════════════════════════════════════════════ */
+const Guide = {
+  root: null, state: { layer: 0, needs: [], holds: [], text: 'Dvorak base layer' },
+  init() {
+    this.root = document.getElementById('guide');
+    if (!Save.data.settings.guideOpen) this.root.classList.add('folded');
+    this.render();
+  },
+  toggle() {
+    this.root.classList.toggle('folded');
+    Save.data.settings.guideOpen = !this.root.classList.contains('folded');
+    Save.persist();
+    this.render();
+  },
+  set(state) {
+    this.state = Object.assign({ layer: 0, needs: [], holds: [], text: '' }, state);
+    this.render();
+  },
+  idle(text) { this.set({ layer: 0, needs: [], holds: [], text: text || 'Dvorak base layer — GACS mods on A O E U · H T N S' }); },
+  forChar(ch, label) {
+    const h = KEY.hint(ch, label);
+    if (!h) { this.idle(); return; }
+    const holds = [];
+    if (h.holdThumb) holds.push(h.holdThumb);
+    if (h.shiftKey) holds.push(h.shiftKey);
+    this.set({ layer: h.layer, needs: h.needs, holds, text: h.text });
+  },
+  forKeyName(k, label) { this.forChar(k, label); },
+  // several keys on one layer (e.g. NAV mouse cluster, arrows)
+  forCluster(layerIdx, keyNames, text) {
+    const needs = [], holds = [];
+    keyNames.forEach(k => { const h = KEY.hint(k); if (h) { needs.push(...h.needs); if (h.holdThumb && !holds.length) holds.push(h.holdThumb); } });
+    this.set({ layer: layerIdx, needs, holds, text });
+  },
+  render() {
+    const { layer, needs, holds, text } = this.state;
+    const folded = this.root.classList.contains('folded');
+    this.root.innerHTML = '';
+    const head = el('div', 'g-head',
+      `<span class="g-title">Corne guide</span>
+       <span class="g-layer">LAYER ${layer} — ${esc(KEYMAP.layerNames[layer])}</span>
+       <span class="g-hint">${esc(text)}</span>
+       <span class="g-fold">${folded ? '▲ show' : '▼ hide'}</span>`);
+    head.onclick = () => this.toggle();
+    this.root.append(head);
+    if (folded) return;
+
+    const body = el('div', 'g-body');
+    const L = KEYMAP.layers[layer];
+    const hit = (list, side, row, col) => list.some(p => p.side === side && String(p.row) === String(row) && p.col === col);
+    const mkKey = (cell, side, row, col, thumb) => {
+      const k = el('div', 'key' + (thumb ? ' thumb' : ''));
+      if (cell.blank) { k.classList.add('blank'); k.textContent = ''; return k; }
+      if (cell.trans) { k.classList.add('transparent'); k.textContent = '▽'; return k; }
+      k.append(el('span', null, esc(cell.l)));
+      if (cell.sub) k.append(el('span', 'sub', esc(cell.sub)));
+      if (cell.held) k.classList.add('hold');
+      if (hit(needs, side, row, col)) k.classList.add('need');
+      if (hit(holds, side, row, col)) k.classList.add('hold');
+      return k;
+    };
+    const half = (side) => {
+      const h = el('div', 'kb-half ' + (side === 'L' ? 'left' : 'right'));
+      const rows = side === 'L' ? L.left : L.right;
+      rows.forEach((r, ri) => {
+        const rowEl = el('div', 'kb-row');
+        r.forEach((c, ci) => rowEl.append(mkKey(c, side, ri, ci, false)));
+        h.append(rowEl);
+      });
+      const th = el('div', 'kb-thumbs');
+      (side === 'L' ? L.leftThumbs : L.rightThumbs).forEach((c, ci) => th.append(mkKey(c, side, 'T', ci, true)));
+      h.append(th);
+      return h;
+    };
+    body.append(half('L'), half('R'));
+    this.root.append(body);
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   SCREENS — main menu, settings, credits, stage & level select.
+   ════════════════════════════════════════════════════════════════ */
+const Screens = {
+  menu() {
+    const s = UI.clear('MAIN MENU');
+    Guide.idle();
+    const w = el('div', 'wrap');
+    w.append(el('div', 'menu-hero',
+      `<div class="tower">Corne-troll Tower</div>
+       <div class="tag">A 46-key career · Dvorak Programmer keymap</div>`));
+    const list = el('div', 'menu-list');
+    const mk = (label, fn) => { const b = el('button', 'btn', label); b.onclick = fn; return b; };
+    list.append(
+      mk('Play', () => Screens.stages()),
+      mk('Settings', () => Screens.settings()),
+      mk('Credits', () => Screens.credits()));
+    w.append(list);
+    if (!Save.canStore)
+      w.append(el('div', 'storage-note', '⚠ Storage unavailable — progress is kept for this session only.'));
+    s.append(w);
+  },
+
+  settings() {
+    const s = UI.clear('SETTINGS');
+    Guide.idle();
+    const w = el('div', 'wrap');
+    w.append(el('h1', 'board', 'Settings'));
+    const mkSlider = (key, label) => {
+      const row = el('div', 'set-row');
+      const val = Math.round(Save.data.settings[key] * 100);
+      row.innerHTML = `<label>${label}</label><input type="range" min="0" max="100" value="${val}"><span class="val">${val}%</span>`;
+      const inp = row.querySelector('input'), out = row.querySelector('.val');
+      inp.oninput = () => {
+        Save.data.settings[key] = inp.value / 100;
+        out.textContent = inp.value + '%';
+        Save.persist(); Sound.applyVolumes();
+        if (key !== 'music') Sound.blip();
+      };
+      return row;
+    };
+    w.append(mkSlider('master', 'Master'), mkSlider('music', 'Music'), mkSlider('sfx', 'SFX'));
+
+    // The secret unlock-all button: fully invisible at rest, but a real
+    // focusable element in the natural tab order. Reveals on hover / focus.
+    const secret = el('button', null, 'unlock every level');
+    secret.id = 'secret-unlock';
+    secret.onclick = () => {
+      Save.data.unlockAll = true; Save.persist();
+      Sound.jingle();
+      UI.toast('Tower override accepted — every level unlocked.');
+    };
+    w.append(secret);
+
+    const back = el('button', 'btn', '◂ Back'); back.style.marginTop = '30px';
+    back.onclick = () => Screens.menu();
+    w.append(back);
+    s.append(w);
+  },
+
+  credits() {
+    const s = UI.clear('CREDITS');
+    Guide.idle();
+    const w = el('div', 'wrap');
+    w.append(el('h1', 'board', 'Credits'));
+    w.append(el('div', null,
+      `<p><b>Corne-troll Tower</b> — a keyboard-learning game for the 46-key Corne split board.</p>
+       <p class="subtle">Game design &amp; code — the Corne-troll Tower crew<br>
+       Keymap — Dvorak Programmer v1 (see the in-game guide)<br>
+       Built with plain HTML, CSS and JavaScript. No planes were harmed.</p>`));
+    const row = el('div', null); row.style.display = 'flex'; row.style.gap = '12px'; row.style.marginTop = '10px';
+    const mkLink = (label, url) => {
+      const a = el('a', 'btn', label);
+      a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.textDecoration = 'none';
+      return a;
+    };
+    row.append(mkLink('💬 Discord', CONFIG.links.discord), mkLink('📘 Facebook', CONFIG.links.facebook));
+    w.append(row);
+    const back = el('button', 'btn', '◂ Back'); back.style.marginTop = '30px';
+    back.onclick = () => Screens.menu();
+    w.append(back);
+    s.append(w);
+  },
+
+  stages() {
+    const s = UI.clear('CAREER — STAGE SELECT');
+    Guide.idle();
+    const w = el('div', 'wrap');
+    w.append(el('h1', 'board', 'Departures — pick your shift'));
+    const grid = el('div', 'cardgrid');
+    const perStage = [CONFIG.stage1, CONFIG.stage2, CONFIG.stage3, CONFIG.stage4];
+    CONFIG.stages.forEach((st, i) => {
+      const defs = perStage[i];
+      const cleared = defs.filter(d => Save.passed(d.id)).length;
+      const unlocked = Save.isUnlocked(defs[0].id);
+      const card = el('div', 'card' + (unlocked ? '' : ' locked'),
+        `<div class="kicker">Stage ${st.num}</div>
+         <h3>${esc(st.title)}</h3>
+         <div class="meta">${esc(st.job)}<br>Trains: ${esc(st.layer)}<br>Reuses: ${esc(st.reuse)}</div>
+         ${unlocked
+            ? `<div class="best">${cleared}/${defs.length} levels cleared</div>`
+            : `<div class="lockline">🔒 Requires: clear ${esc(prevLevelId(defs[0].id))} (${esc(gateSummary(prevLevelId(defs[0].id)))})</div>`}
+         ${cleared === defs.length ? '<div class="done">✔</div>' : ''}`);
+      if (unlocked) card.onclick = () => Screens.levels(st.num);
+      grid.append(card);
+    });
+    w.append(grid);
+
+    // Profile summary
+    const total = LEVELS.length, done = LEVELS.filter(l => Save.passed(l.id)).length;
+    let bestWpm = 0;
+    CONFIG.stage1.forEach(d => { const r = Save.rec(d.id); if (r && r.best) bestWpm = Math.max(bestWpm, r.best.wpm || 0); });
+    const pct = i => { const defs = perStage[i]; return Math.round(100 * defs.filter(d => Save.passed(d.id)).length / defs.length); };
+    w.append(el('div', 'profilebar',
+      `<span>PROFILE</span><span>Cleared: <b>${done}/${total}</b></span>
+       <span>S1 <b>${pct(0)}%</b> · S2 <b>${pct(1)}%</b> · S3 <b>${pct(2)}%</b> · S4 <b>${pct(3)}%</b></span>
+       <span>Best WPM: <b>${bestWpm || '—'}</b></span>
+       ${Save.data.unlockAll ? '<span style="color:var(--amber)">OVERRIDE ACTIVE</span>' : ''}`));
+    s.append(w);
+  },
+
+  levels(stageNum) {
+    const st = CONFIG.stages[stageNum - 1];
+    const defs = [CONFIG.stage1, CONFIG.stage2, CONFIG.stage3, CONFIG.stage4][stageNum - 1];
+    const s = UI.clear(`STAGE ${stageNum} — ${st.title.toUpperCase()}`);
+    Guide.idle();
+    const w = el('div', 'wrap');
+    w.append(el('h1', 'board', `${st.title}`));
+    w.append(el('div', 'subtle', `${st.job} — trains ${st.layer}`));
+    const grid = el('div', 'cardgrid');
+    defs.forEach(def => {
+      const unlocked = Save.isUnlocked(def.id);
+      const rec = Save.rec(def.id);
+      const passed = Save.passed(def.id);
+      let bestLine = '';
+      if (rec && rec.best) {
+        const b = rec.best;
+        if (stageNum === 1) bestLine = `${b.wpm} WPM · ${b.acc}%`;
+        else if (stageNum === 2) bestLine = `${fmtTime(b.time)} · ${b.falseTags} false · ${b.nameAcc}% names`;
+        else if (stageNum === 3) bestLine = `${fmtTime(b.time)} · +${b.over} keys · ${b.fp}% first-pass`;
+        else bestLine = `${fmtTime(b.time)} · ${b.wrong} wrong picks`;
+      }
+      const prev = prevLevelId(def.id);
+      const card = el('div', 'card' + (unlocked ? '' : ' locked'),
+        `<div class="kicker">${esc(def.id)}</div>
+         <h3>${esc(def.name)}</h3>
+         <div class="meta">Gate: ${esc(gateSummary(def.id))}</div>
+         ${!unlocked ? `<div class="lockline">🔒 Clear ${esc(prev)} at ${esc(gateSummary(prev))}</div>` : ''}
+         ${bestLine ? `<div class="best">★ ${esc(bestLine)}</div>` : ''}
+         ${passed ? '<div class="done">✔</div>' : ''}`);
+      if (unlocked) card.onclick = () => Screens.play(def.id);
+      grid.append(card);
+    });
+    w.append(grid);
+    const back = el('button', 'btn', '◂ Stages'); back.style.marginTop = '22px';
+    back.onclick = () => Screens.stages();
+    w.append(back);
+    s.append(w);
+  },
+
+  play(id) {
+    if (!Save.isUnlocked(id)) { UI.toast('That level is still locked.'); return; }
+    const lv = levelAt(id);
+    [Stage1, Stage2, Stage3, Stage4][lv.stage - 1].start(lv);
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   STAGE 1 — FLIGHT SCHOOL (Layer 0, Dvorak base)
+   warm-up (untimed) → practice (scored) → test (gated)
+   ════════════════════════════════════════════════════════════════ */
+const Stage1 = {
+  lv: null, def: null, phase: 'warmup',
+  tokens: [], idx: 0, errors: 0, keystrokes: 0, t0: 0, wrongBuf: [],
+  timer: null, textEl: null, run: false,
+
+  taughtPool(uptoIdx) {
+    let pool = [];
+    for (let i = 0; i <= uptoIdx; i++) pool = pool.concat(CONFIG.stage1[i].newKeys.filter(k => k.length === 1));
+    return pool;
+  },
+
+  /* ── token generation ─────────────────────────────────────────── */
+  strToTokens(str) {
+    const out = [];
+    for (const ch of str) {
+      if (ch === '\t') out.push({ key: 'Tab', label: '⇥ TAB' });
+      else if (ch === '\x1b') out.push({ key: 'Escape', label: '⎋ ESC' });
+      else if (ch === '\n') out.push({ key: 'Enter', label: '⏎' });
+      else out.push({ ch });
+    }
+    return out;
+  },
+  generate(kind, chars) {
+    const C = CONTENT;
+    const words = (poolFn) => {
+      let s = '';
+      while (s.length < chars) s += (s ? ' ' : '') + poolFn();
+      return this.strToTokens(s);
+    };
+    if (kind === 'bursts') {
+      const L = ['a','o','e','u','i'], R = ['d','h','t','n','s'];
+      let parts = shuffle(C.homeLetters).concat(shuffle(C.homeLetters));      // singles
+      for (let i = 0; i < 10; i++) parts.push(pick(L) + pick(R), pick(R) + pick(L)); // alternating pairs
+      let s = parts.join(' ');
+      while (s.length < chars) {                                              // 3–5 key bursts
+        let b = ''; const n = irnd(3, 5);
+        for (let i = 0; i < n; i++) b += pick(C.homeLetters);
+        s += ' ' + b;
+      }
+      return this.strToTokens(s.slice(0, chars + 6));
+    }
+    if (kind === 'homeWords') return words(() => pick(C.homeWords));
+    if (kind === 'topWords') return words(() => {
+      const r = Math.random();
+      return r < 0.3 ? pick(C.homeWords) : r < 0.85 ? pick(C.topWords) : pick(C.topPunct);
+    });
+    if (kind === 'botWords') return words(() => {
+      const r = Math.random();
+      const w = r < 0.25 ? pick(C.homeWords) : r < 0.5 ? pick(C.topWords) : pick(C.botWords);
+      return Math.random() < 0.12 ? w + ';' : w;
+    });
+    if (kind === 'pangrams') {
+      let s = '';
+      const bag = shuffle(C.pangrams);
+      let i = 0;
+      while (s.length < chars) s += (s ? ' ' : '') + bag[i++ % bag.length];
+      return this.strToTokens(s);
+    }
+    // exam: prose lines with Tab/Esc tokens, Enter closing each line
+    let toks = [];
+    const bag = shuffle(C.examLines);
+    let i = 0, count = 0;
+    while (count < chars) {
+      const line = bag[i++ % bag.length];
+      const t = this.strToTokens(line);
+      t.push({ key: 'Enter', label: '⏎' });
+      toks = toks.concat(t);
+      count += line.length + 1;
+    }
+    return toks;
+  },
+  warmupTokens() {
+    const keys = this.def.newKeys.length ? this.def.newKeys
+      : (this.lv.idx === 1 ? CONTENT.homeWords.slice(0, 8).join(' ').split('') : CONTENT.homeLetters);
+    const out = [];
+    keys.forEach(k => {
+      for (let r = 0; r < 2; r++) {
+        if (k.length === 1) out.push({ ch: k });
+        else out.push({ key: k, label: k === 'Tab' ? '⇥ TAB' : k === 'Escape' ? '⎋ ESC' : k });
+        out.push({ ch: ' ' });
+      }
+    });
+    out.pop();
+    return out;
+  },
+
+  /* ── screen ───────────────────────────────────────────────────── */
+  start(lv) {
+    this.lv = lv; this.def = lv.def;
+    const s = UI.clear(`${lv.def.id} · ${lv.def.name.toUpperCase()}`);
+    const w = el('div', 't-stage');
+    w.append(el('h2', 'board', `${this.def.id} — ${this.def.name}`));
+    w.append(el('div', 'subtle', `Gate: ${gateSummary(this.def.id)} · measured over the keys taught so far`));
+    const phaseRow = el('div', 't-phase');
+    ['warmup', 'practice', 'test'].forEach(p => {
+      const b = el('button', 'btn', { warmup: 'Warm-up', practice: 'Practice run', test: 'Test run' }[p]);
+      b.dataset.phase = p;
+      b.onclick = () => this.begin(p);
+      phaseRow.append(b);
+    });
+    const restart = el('button', 'btn', '↻ Restart');
+    restart.onclick = () => this.begin(this.phase);
+    phaseRow.append(restart);
+    w.append(phaseRow);
+    w.append(el('div', 't-meters',
+      `<span>WPM <b id="m-wpm">–</b></span><span>ACC <b id="m-acc">–</b></span>
+       <span>PROGRESS <b id="m-prog">0%</b></span><span id="m-phase" style="color:var(--amber)"></span>`));
+    this.textEl = el('div', 't-text');
+    w.append(this.textEl);
+    w.append(el('div', 't-note', 'Errors buzz and hold the cursor. In strict levels (1-5+) wrong keys land in the buffer — fix them with Backspace (left thumb).'));
+    s.append(w);
+    UI.setCleanup(() => { clearInterval(this.timer); this.run = false; });
+    this.begin('warmup');
+  },
+
+  begin(phase) {
+    this.phase = phase;
+    document.querySelectorAll('.t-phase .btn').forEach(b =>
+      b.classList.toggle('on', b.dataset.phase === phase));
+    const chars = phase === 'practice' ? Math.round(this.def.testChars * 0.6) : this.def.testChars;
+    this.tokens = phase === 'warmup' ? this.warmupTokens() : this.generate(this.def.gen, chars);
+    this.idx = 0; this.errors = 0; this.keystrokes = 0; this.t0 = 0; this.wrongBuf = []; this.run = true;
+    document.getElementById('m-phase').textContent =
+      { warmup: 'WARM-UP — untimed, follow the guide', practice: 'PRACTICE — scored, no gate', test: 'TEST — gate applies' }[phase];
+    clearInterval(this.timer);
+    this.timer = setInterval(() => this.meters(), 400);
+    this.renderText();
+    this.hint();
+    Keys.set({ capture: true, onKey: (e) => this.onKey(e) });
+  },
+
+  hint() {
+    const t = this.tokens[this.idx];
+    if (!t) return;
+    if (this.wrongBuf.length) { Guide.forKeyName('Backspace', 'Bsp'); return; }
+    if (t.ch) Guide.forChar(t.ch === ' ' ? ' ' : t.ch, t.ch === ' ' ? 'Space' : undefined);
+    else Guide.forKeyName(t.key);
+  },
+
+  onKey(e) {
+    if (!this.run) return false;
+    const k = e.key;
+    if (['Shift','Control','Alt','Meta','CapsLock','NumLock'].includes(k)) return false;
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    const tok = this.tokens[this.idx];
+    if (!tok) return false;
+
+    if (this.def.strict && this.phase !== 'warmup') {
+      if (k === 'Backspace') {
+        if (this.wrongBuf.length) { this.wrongBuf.pop(); Sound.tick(); }
+        this.renderText(); this.hint(); return true;
+      }
+      if (this.wrongBuf.length) {                       // buffer dirty: everything else piles on
+        if (k.length === 1 || ['Tab','Enter','Escape'].includes(k)) {
+          if (this.wrongBuf.length < 8) this.wrongBuf.push(k.length === 1 ? k : '⌧');
+          this.errors++; this.keystrokes++; Sound.buzz();
+          this.renderText(); this.meters();
+        }
+        return true;
+      }
+    }
+    const want = tok.ch !== undefined ? tok.ch : tok.key;
+    const got = tok.ch !== undefined ? (k.length === 1 ? k : null) : k;
+    if (got === null && k !== 'Backspace' && !['Tab','Enter','Escape'].includes(k)) return false;
+    if (!this.t0 && this.phase !== 'warmup') this.t0 = performance.now();
+    this.keystrokes++;
+    if (got === want) {
+      this.idx++;
+      Sound.tick();
+      if (this.idx >= this.tokens.length) { this.finish(); return true; }
+      this.renderText(); this.hint(); this.meters();
+    } else {
+      this.errors++;
+      Sound.buzz();
+      if (this.def.strict && this.phase !== 'warmup' && (k.length === 1 || ['Tab','Enter','Escape'].includes(k))) {
+        this.wrongBuf.push(k.length === 1 ? k : '⌧');
+      }
+      this.renderText(); this.hint(); this.meters();
+    }
+    return true;
+  },
+
+  renderText() {
+    const frag = document.createDocumentFragment();
+    this.tokens.forEach((t, i) => {
+      let cls = 'tok', body;
+      if (t.ch !== undefined) {
+        body = t.ch;
+        if (i === this.idx && t.ch === ' ') body = '␣';
+      } else { cls += ' special'; body = t.label || t.key; }
+      if (i < this.idx) cls += ' done';
+      if (i === this.idx && !this.wrongBuf.length) cls += ' cur';
+      if (i === this.idx) {
+        this.wrongBuf.forEach(wc => frag.append(el('span', 'tok wrongchar', esc(wc === ' ' ? '␣' : wc))));
+        if (this.wrongBuf.length) cls += ' err';
+      }
+      frag.append(el('span', cls, esc(body)));
+      if (t.key === 'Enter') frag.append(document.createTextNode('\n'));
+    });
+    this.textEl.innerHTML = '';
+    this.textEl.append(frag);
+    const cur = this.textEl.querySelector('.cur, .wrongchar');
+    if (cur) cur.scrollIntoView({ block: 'nearest' });
+  },
+
+  stats() {
+    const mins = this.t0 ? (performance.now() - this.t0) / 60000 : 0;
+    const wpm = mins > 0 ? Math.round((this.idx / 5) / mins) : 0;
+    const acc = this.keystrokes ? Math.round(100 * Math.max(0, this.keystrokes - this.errors) / this.keystrokes) : 100;
+    return { wpm, acc, mins };
+  },
+  meters() {
+    const { wpm, acc } = this.stats();
+    const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+    set('m-wpm', this.phase === 'warmup' ? '–' : wpm);
+    set('m-acc', acc + '%');
+    set('m-prog', Math.round(100 * this.idx / this.tokens.length) + '%');
+  },
+
+  finish() {
+    this.run = false;
+    clearInterval(this.timer);
+    Keys.clear();
+    const { wpm, acc } = this.stats();
+    if (this.phase === 'warmup') {
+      Sound.good();
+      UI.toast('Warm-up done — moving to the practice run.');
+      this.begin('practice');
+      return;
+    }
+    if (this.phase === 'practice') {
+      Sound.good();
+      UI.toast(`Practice: ${wpm} WPM @ ${acc}% — take the test when ready.`);
+      this.begin('test');
+      return;
+    }
+    const g = this.def.gate;
+    const passed = wpm >= g.wpm && acc >= g.acc;
+    Save.record(this.def.id, passed, { wpm, acc }, 'wpm', false);
+    UI.results({
+      levelId: this.def.id, passed,
+      rows: [['Speed', wpm + ' WPM'], ['Accuracy', acc + '%'], ['Errors', this.errors], ['Keystrokes', this.keystrokes]],
+      onRetry: () => this.begin('test')
+    });
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   STAGE 3 CONTENT — repair tickets. Python-flavoured pseudocode
+   about airport systems; identifiers mix snake_case & camelCase;
+   symbol-dense on purpose so SYM stays held.
+   ════════════════════════════════════════════════════════════════ */
+const TICKETS = {
+  '3-1': {
+    files: {
+      'gates.py':
+`# GATE ASSIGNMENT -- maintenance build
+def assign_gate(flight):
+    gate = free_gate
+    flight.gate = gate
+    return gate`,
+      'deice.py':
+`# DE-ICING SCHEDULER
+def next_slot(truck):
+    slot = deice_queue.next
+    truck.assignSlot(slot)
+    return slot`,
+      'radar.py':
+`# RADAR SWEEP
+def updateRadarSweep(dt):
+    sweep = sweep + rate
+    return sweep`
+    },
+    tickets: [
+      { file: 'gates.py', title: 'MB-4411 · gates.py',
+        brief: 'assign_gate never actually calls free_gate. Rebuild the call with a zone and a wide-body flag.',
+        after:
+`# GATE ASSIGNMENT -- maintenance build
+def assign_gate(flight):
+    gate = free_gate(zone="A", wide_body=(flight.kind == "heavy"))
+    flight.gate = gate
+    return gate` },
+      { file: 'deice.py', title: 'MB-4412 · deice.py',
+        brief: 'The scheduler must pull a prioritised slot when it is freezing outside.',
+        after:
+`# DE-ICING SCHEDULER
+def next_slot(truck):
+    slot = deice_queue.nextSlot(priority=(outside_temp < freezing))
+    truck.assignSlot(slot)
+    return slot` },
+      { file: 'radar.py', title: 'MB-4413 · radar.py',
+        brief: 'The sweep ignores the timestep and never wraps. Fix the update line.',
+        after:
+`# RADAR SWEEP
+def updateRadarSweep(dt):
+    sweep = (sweep + rate * dt) % full_circle
+    return sweep` }
+    ]
+  },
+
+  '3-2': {
+    files: {
+      'belts.py':
+`# CAROUSEL ROUTING TABLE
+BELT_MAP = "todo"
+
+def route_bag(bag):
+    belt = BELT_MAP[bag.zone]
+    conveyor.sendTo(bag, belt)`,
+      'boarding.py':
+`# BOARDING PASS VALIDATION
+def validate_pass(bp):
+    checks = None
+    flags = None
+    return all(checks) and not flags["standby"]`
+    },
+    tickets: [
+      { file: 'belts.py', title: 'MB-4420 · belts.py',
+        brief: 'Replace the "todo" placeholder with the real routing dict (zones map to belt lists).',
+        after:
+`# CAROUSEL ROUTING TABLE
+BELT_MAP = {
+    "intl": ["alpha", "bravo"],
+    "domestic": ["charlie"],
+    "oversize": ["delta", "echo"],
+}
+
+def route_bag(bag):
+    belt = BELT_MAP[bag.zone]
+    conveyor.sendTo(bag, belt)` },
+      { file: 'boarding.py', title: 'MB-4421 · boarding.py',
+        brief: 'Fill in the checks list and the flags dict.',
+        after:
+`# BOARDING PASS VALIDATION
+def validate_pass(bp):
+    checks = [bp.name != "", bp.gate in OPEN_GATES, (bp.seat != None)]
+    flags = {"priority": bp.tier == "gold", "standby": False}
+    return all(checks) and not flags["standby"]` }
+    ]
+  },
+
+  '3-3': {
+    files: {
+      'speed.py':
+`# CAROUSEL SPEED CONTROL
+def set_speed(carousel, level):
+    legacy_pwm.write(level)
+    legacy_pwm.flush()
+    legacy_pwm.close()
+    carousel.driver.setSpeed(level)`,
+      'handlers.py':
+`# NEW DE-ICE HANDLER (disabled)
+"""
+def on_frost(sensor):
+    dispatch(fuel_truck, deice_rig)
+    log("frost event", sensor.zone)
+"""`,
+      'cleanup.py':
+`# APRON LIGHTING
+def lights_on(apron):
+    apron.rows.powerUp(all=True)
+
+def legacy_lights(apron):
+    relay_bank.pulse()
+    relay_bank.pulse()
+    relay_bank.latch(hold=True)
+
+def lights_off(apron):
+    apron.rows.powerDown()`
+    },
+    tickets: [
+      { file: 'speed.py', title: 'MB-4430 · speed.py',
+        brief: 'Comment out the three legacy_pwm lines with # — the new driver call below stays live.',
+        after:
+`# CAROUSEL SPEED CONTROL
+def set_speed(carousel, level):
+    # legacy_pwm.write(level)
+    # legacy_pwm.flush()
+    # legacy_pwm.close()
+    carousel.driver.setSpeed(level)` },
+      { file: 'handlers.py', title: 'MB-4431 · handlers.py',
+        brief: 'Uncomment the new handler: delete the two """ marker lines wrapping it.',
+        after:
+`# NEW DE-ICE HANDLER (disabled)
+def on_frost(sensor):
+    dispatch(fuel_truck, deice_rig)
+    log("frost event", sensor.zone)` },
+      { file: 'cleanup.py', title: 'MB-4432 · cleanup.py',
+        brief: 'Delete the deprecated legacy_lights function — select it (Shift + NAV arrows / Home / End), then Backspace.',
+        after:
+`# APRON LIGHTING
+def lights_on(apron):
+    apron.rows.powerUp(all=True)
+
+def lights_off(apron):
+    apron.rows.powerDown()` }
+    ]
+  },
+
+  '3-4': {
+    files: {
+      'validator.py':
+`# BOARDING PASS CHECKS
+# TODO: paste validateBoardingPass here (from util.py)
+
+def gate_check(bp):
+    return validateBoardingPass(bp) and bp.gate in OPEN_GATES`,
+      'util.py':
+`# SHARED UTILITIES (legacy module, read-only spirit)
+def validateBoardingPass(bp):
+    ok = (bp.name != "") and (bp.seat != None)
+    return ok and not bp.flags.get("revoked", False)`
+    },
+    tickets: [
+      { file: 'validator.py', title: 'MB-4440 · validator.py',
+        brief: 'Carry validateBoardingPass across: open util.py in the split (PgDn to switch panes), select the function with Shift + NAV arrows, Copy, then paste it over the TODO line here.',
+        split: 'util.py',
+        after:
+`# BOARDING PASS CHECKS
+def validateBoardingPass(bp):
+    ok = (bp.name != "") and (bp.seat != None)
+    return ok and not bp.flags.get("revoked", False)
+
+def gate_check(bp):
+    return validateBoardingPass(bp) and bp.gate in OPEN_GATES` }
+    ]
+  },
+
+  '3-5': {
+    files: {
+      'carousel.py':
+`# CAROUSEL SUPERVISOR
+def restart_belt(belt):
+    belt.stop()
+    belt.start()
+
+def health(belt):
+    return "ok"`,
+      'dispatch.py':
+`# TRUCK DISPATCH
+def dispatchNow(truck, job):
+    truck.queue = job`,
+      'notes.txt':
+`ops note: after patching, restart carousel three and
+check the de-ice board from the terminal.`
+    },
+    tickets: [
+      { file: 'carousel.py', title: 'MB-4450 · carousel.py',
+        brief: 'Soft-reset the motor during restart, and make health() return a real status dict.',
+        after:
+`# CAROUSEL SUPERVISOR
+def restart_belt(belt):
+    belt.stop()
+    belt.motor.reset(soft=True)
+    belt.start()
+
+def health(belt):
+    status = {"rpm": belt.rpm, "jam": belt.isJammed()}
+    return status` },
+      { file: 'dispatch.py', title: 'MB-4451 · dispatch.py',
+        brief: 'Queue the job properly (append a dict) and notify the fuel truck.',
+        after:
+`# TRUCK DISPATCH
+def dispatchNow(truck, job):
+    truck.queue.append({"job": job, "urgent": (job.kind == "deice")})
+    fuel_truck.notify(truck.id, job.eta)` },
+      { file: null, title: 'MB-4452 · terminal',
+        brief: 'Close out the ticket from the terminal (PgDn until the terminal focuses): run the two commands, in order.',
+        terminal: ['restart carousel_3', 'status deice'] }
+    ]
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   STAGE 2 — SECURITY CHECKPOINT (Layer 1 NAV & mouse + Layer 0)
+   Real OS pointer (firmware mouse keys) tags contraband; names are
+   typed on the base layer; containers drill the NAV arrow cluster;
+   Ctrl+Z (NAV Undo) reverts mistags.
+   ════════════════════════════════════════════════════════════════ */
+const Stage2 = {
+  def: null, lv: null,
+  bags: [], queue: [], monitor: null, reportBar: null,
+  raf: 0, lastT: 0, running: false, paused: false,
+  timeLeft: 0, falseTags: 0, undoStack: [],
+  redsTotal: 0, redsFiled: 0, nameKeys: 0, nameChars: 0,
+  panelStack: [], report: null, bagsDone: 0, t0: 0,
+
+  /* ── generation ──────────────────────────────────────────────── */
+  makeItem(spec, red, container) {
+    return { name: spec.name, glyph: spec.glyph, red, container: !!container,
+             contents: [], filed: false, falseTagged: false, opened: false };
+  },
+  redPool() {
+    const X = CONTENT.xray;
+    return this.def.pool === 'long' ? X.redShort.concat(X.redLong) : X.redShort;
+  },
+  makeContainer(depth) {
+    const X = CONTENT.xray;
+    const c = this.makeItem(pick(X.containers), true, true);
+    const n = irnd(3, 4);
+    c.contents.push(this.makeItem(pick(this.redPool()), true));
+    for (let i = 1; i < n; i++) {
+      if (depth > 1 && i === 1 && Math.random() < 0.5) c.contents.push(this.makeContainer(depth - 1));
+      else if (Math.random() < 0.35) c.contents.push(this.makeItem(pick(this.redPool()), true));
+      else c.contents.push(this.makeItem(pick(X.safe), false));
+    }
+    c.contents = shuffle(c.contents);
+    return c;
+  },
+  makeBag(i) {
+    const X = CONTENT.xray;
+    const items = [];
+    const n = irnd(this.def.itemsPerBag[0], this.def.itemsPerBag[1]);
+    const wantContainer = this.def.containerDepth > 0 && (i % 3 === 1);
+    if (wantContainer) items.push(this.makeContainer(this.def.containerDepth));
+    else {
+      items.push(this.makeItem(pick(this.redPool()), true));
+      if (this.lv.idx >= 1 && Math.random() < 0.35) items.push(this.makeItem(pick(this.redPool()), true));
+    }
+    while (items.length < n) {
+      const safePool = this.def.lookalikes && Math.random() < 0.4 ? X.lookalikeSafe : X.safe;
+      items.push(this.makeItem(pick(safePool), false));
+    }
+    const w = 150 + items.length * 34;
+    return { items: shuffle(items), w, h: 128, x: 0, spawned: false, resolved: false, dom: null };
+  },
+  countReds(items) {
+    let n = 0;
+    items.forEach(it => { if (it.container) n += this.countReds(it.contents); else if (it.red) n++; });
+    return n;
+  },
+  unfiledReds(items) {
+    let n = 0;
+    items.forEach(it => { if (it.container) n += this.unfiledReds(it.contents); else if (it.red && !it.filed) n++; });
+    return n;
+  },
+
+  /* ── screen ──────────────────────────────────────────────────── */
+  start(lv) {
+    this.lv = lv; this.def = lv.def;
+    const s = UI.clear(`${lv.def.id} · SECURITY CHECKPOINT`);
+    const w = el('div', 'xr-wrap');
+    w.append(el('div', 'xr-hud',
+      `<span>BAGS <b id="x-bags">0/0</b></span><span>REDS <b id="x-reds">0/0</b></span>
+       <span>FALSE <b id="x-false">0</b>/${this.def.maxFalse}</span>
+       <span>NAMES <b id="x-nacc">100%</b></span><span>SHIFT <b id="x-time">–</b></span>`));
+    this.monitor = el('div', 'xr-monitor');
+    this.monitor.append(el('div', 'xr-belt'));
+    w.append(this.monitor);
+    this.reportBar = el('div', 'xr-report');
+    this.reportBar.style.display = 'none';
+    w.append(this.reportBar);
+    s.append(w);
+
+    this.bags = []; this.queue = [];
+    for (let i = 0; i < this.def.bags; i++) this.queue.push(this.makeBag(i));
+    this.redsTotal = this.queue.reduce((a, b) => a + this.countReds(b.items), 0);
+    this.redsFiled = 0; this.falseTags = 0; this.undoStack = [];
+    this.nameKeys = 0; this.nameChars = 0; this.bagsDone = 0;
+    this.timeLeft = this.def.time; this.panelStack = []; this.report = null;
+    this.running = false; this.paused = false;
+
+    UI.setCleanup(() => { cancelAnimationFrame(this.raf); this.running = false; });
+    this.guideBelt();
+    UI.briefing(this.monitor, `Shift briefing — ${this.def.id} ${this.def.name}`, [
+      'Bags cross the X-ray. <b>▲ red silhouettes are contraband</b>, ● white ones are safe.',
+      'Hold <kbd>NAV</kbd> (left thumb) and steer the cursor with the mouse keys; <kbd>LC</kbd> left-clicks a red item to tag it.',
+      'Tagging opens the report bar — type the item\'s exact name and press <kbd>Enter</kbd>.',
+      'Red <b>containers</b> open an inspection panel: <kbd>↑</kbd>/<kbd>↓</kbd> (NAV on T/N) to move, <kbd>Enter</kbd> to report, <kbd>Esc</kbd> to close.',
+      'Mistagged a safe item? <kbd>NAV</kbd>+<kbd>Undo</kbd> (Ctrl+Z) reverts it.',
+      `Quota: ${this.def.bags} bags · every red reported · ≤${this.def.maxFalse} false tags.`
+    ], 'Start shift', () => this.go());
+  },
+
+  go() {
+    this.running = true;
+    this.t0 = performance.now();
+    this.lastT = this.t0;
+    Keys.set({ capture: true, onKey: (e, editable) => this.onKey(e, editable) });
+    const loop = (t) => {
+      if (!this.running) return;
+      const dt = Math.min(0.1, (t - this.lastT) / 1000);
+      this.lastT = t;
+      this.tickBelt(dt);
+      this.timeLeft -= dt;
+      if (this.timeLeft <= 0) { this.fail('The shift timer ran out.'); return; }
+      this.hud();
+      this.raf = requestAnimationFrame(loop);
+    };
+    this.raf = requestAnimationFrame(loop);
+  },
+
+  hud() {
+    const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+    set('x-bags', `${this.bagsDone}/${this.def.bags}`);
+    set('x-reds', `${this.redsFiled}/${this.redsTotal}`);
+    set('x-false', this.falseTags);
+    set('x-nacc', this.nameAcc() + '%');
+    set('x-time', fmtTime(this.timeLeft));
+  },
+  nameAcc() { return this.nameKeys ? Math.min(100, Math.round(100 * this.nameChars / this.nameKeys)) : 100; },
+
+  /* ── belt ────────────────────────────────────────────────────── */
+  tickBelt(dt) {
+    if (this.paused) return;
+    const W = this.monitor.clientWidth;
+    // spawn next bag when there is room
+    const last = this.bags[this.bags.length - 1];
+    if (this.queue.length && (!last || last.x + last.w < W - 70)) {
+      const b = this.queue.shift();
+      b.x = W + 10;
+      this.spawnBag(b);
+      this.bags.push(b);
+    }
+    for (const b of this.bags) {
+      if (b.resolved) continue;
+      b.x -= this.def.beltSpeed * dt;
+      b.dom.style.left = b.x + 'px';
+      if (b.x + b.w < -8) {
+        b.resolved = true;
+        this.bagsDone++;
+        b.dom.remove();
+        const missed = this.unfiledReds(b.items);
+        if (missed > 0) { this.fail(`A red item slipped through in that bag (${missed} unreported).`); return; }
+        if (this.bagsDone >= this.def.bags) { this.finish(); return; }
+      }
+    }
+  },
+  spawnBag(bag) {
+    const beltTop = this.monitor.clientHeight - 26;
+    const d = el('div', 'bag');
+    d.style.width = bag.w + 'px'; d.style.height = bag.h + 'px';
+    d.style.top = (beltTop - bag.h - 2) + 'px'; d.style.left = bag.x + 'px';
+    d.append(el('div', 'bagtag', 'BAG ' + irnd(100, 999)));
+    const cols = bag.items.length;
+    bag.items.forEach((it, i) => {
+      const x = 10 + i * ((bag.w - 46) / Math.max(1, cols - 1) || 0);
+      const y = 18 + (i % 2) * 44 + irnd(-6, 6);
+      d.append(this.itemDom(it, x, Math.min(y, bag.h - 52)));
+    });
+    bag.dom = d;
+    this.monitor.append(d);
+  },
+  itemDom(it, x, y) {
+    const d = el('div', 'xitem ' + (it.red ? 'red' : 'safe'),
+      `<span class="glyph">${it.glyph}</span><span class="badge">${it.red ? '▲' : '●'}</span>`);
+    d.style.left = x + 'px'; d.style.top = y + 'px';
+    d.onclick = (ev) => { ev.stopPropagation(); this.clickItem(it, d); };
+    it.dom = d;
+    return d;
+  },
+
+  /* ── tagging & reports ───────────────────────────────────────── */
+  clickItem(it, dom) {
+    if (!this.running || this.report || this.panelStack.length) return;
+    if (it.filed || it.falseTagged) return;
+    if (!it.red) {
+      it.falseTagged = true;
+      dom.classList.add('falsetag');
+      this.falseTags++;
+      this.undoStack.push(it);
+      Sound.buzz();
+      Guide.forKeyName('Undo');
+      UI.toast('False alarm! NAV + Undo (Ctrl+Z) reverts it.');
+      return;
+    }
+    Sound.blip();
+    if (it.container) { it.opened = true; this.openPanel(it); return; }
+    this.openReport(it);
+  },
+  undo() {
+    const it = this.undoStack.pop();
+    if (!it) return;
+    it.falseTagged = false;
+    if (it.dom) it.dom.classList.remove('falsetag');
+    this.falseTags--;
+    Sound.good();
+    UI.toast('Mistag reverted.');
+    this.guideBelt();
+  },
+
+  openReport(it) {
+    this.paused = true;
+    this.report = { item: it };
+    this.reportBar.style.display = 'flex';
+    this.reportBar.innerHTML = `<span style="color:var(--red)">▲ REPORT:</span>
+      <span>${it.glyph}</span><input type="text" spellcheck="false" autocomplete="off">
+      <span class="subtle" style="font-size:12px">type the exact name · Enter files · Esc cancels</span>`;
+    const inp = this.reportBar.querySelector('input');
+    inp.addEventListener('keydown', (e) => {
+      if (e.key.length === 1 || e.key === 'Backspace') this.nameKeys++;
+    });
+    inp.addEventListener('input', () => this.guideName(it.name, inp.value));
+    inp.focus();
+    this.guideName(it.name, '');
+  },
+  submitReport() {
+    const inp = this.reportBar.querySelector('input');
+    const it = this.report.item;
+    if (inp.value.trim().toLowerCase() === it.name.toLowerCase()) {
+      it.filed = true;
+      this.nameChars += it.name.length;
+      if (it.dom) it.dom.classList.add('tagged');
+      this.redsFiled++;
+      Sound.good();
+      this.closeReport();
+    } else { Sound.buzz(); inp.select(); }
+  },
+  closeReport() {
+    this.report = null;
+    this.reportBar.style.display = 'none';
+    this.paused = this.panelStack.length > 0;
+    this.guideBelt();
+  },
+
+  /* ── container inspection panel ──────────────────────────────── */
+  openPanel(container) {
+    this.paused = true;
+    const p = { container, sel: 0, typing: null, dom: null };
+    this.panelStack.push(p);
+    this.renderPanel();
+    this.guidePanel();
+  },
+  topPanel() { return this.panelStack[this.panelStack.length - 1]; },
+  renderPanel() {
+    this.panelStack.forEach(p => { if (p.dom) p.dom.remove(); });
+    const p = this.topPanel();
+    if (!p) return;
+    const c = p.container;
+    const d = el('div', 'xr-panel');
+    d.append(el('h4', null, `${c.glyph} ${esc(c.name)} — contents`));
+    c.contents.forEach((it, i) => {
+      const cls = ['entry', it.red ? 'redE' : 'safeE', it.filed ? 'doneE' : '', i === p.sel ? 'sel' : ''].join(' ');
+      const e = el('div', cls,
+        `<span class="eglyph">${it.glyph}</span><span>${it.red ? '▲' : '●'}</span>
+         <span class="ename">${esc(it.name)}${it.container ? ' (container)' : ''}</span>`);
+      if (i === p.sel && p.typing !== null) {
+        const inp = el('input');
+        inp.type = 'text'; inp.spellcheck = false;
+        inp.value = p.typing;
+        e.append(inp);
+        setTimeout(() => { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }, 0);
+        inp.addEventListener('keydown', (ev) => {
+          if (ev.key.length === 1 || ev.key === 'Backspace') this.nameKeys++;
+        });
+        inp.addEventListener('input', () => { p.typing = inp.value; this.guideName(it.name, inp.value); });
+      }
+      d.append(e);
+    });
+    d.append(el('div', 'phint', '↑/↓ move (NAV on T/N) · Enter report red · Esc close'));
+    p.dom = d;
+    this.monitor.append(d);
+  },
+  panelKey(e) {
+    const p = this.topPanel();
+    const c = p.container;
+    const it = c.contents[p.sel];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (p.typing !== null) return true;   // finish or Esc the name first
+      p.sel = (p.sel + (e.key === 'ArrowDown' ? 1 : c.contents.length - 1)) % c.contents.length;
+      Sound.blip();
+      this.renderPanel(); this.guidePanel();
+      return true;
+    }
+    if (e.key === 'Enter') {
+      if (p.typing !== null) {              // submit typed name
+        if (p.typing.trim().toLowerCase() === it.name.toLowerCase()) {
+          it.filed = true;
+          this.nameChars += it.name.length;
+          this.redsFiled++;
+          p.typing = null;
+          Sound.good();
+        } else Sound.buzz();
+        this.renderPanel(); this.guidePanel();
+        return true;
+      }
+      if (it.container && !it.filed) { it.opened = true; Sound.blip(); this.openPanel(it); return true; }
+      if (it.red && !it.filed) { p.typing = ''; this.renderPanel(); this.guideName(it.name, ''); return true; }
+      Sound.buzz();                          // white entry: skip it
+      return true;
+    }
+    if (e.key === 'Escape') {
+      if (p.typing !== null) { p.typing = null; this.renderPanel(); this.guidePanel(); return true; }
+      p.dom.remove();
+      this.panelStack.pop();
+      if (this.panelStack.length) { this.renderPanel(); this.guidePanel(); }
+      else { this.paused = !!this.report; this.guideBelt(); }
+      Sound.blip();
+      return true;
+    }
+    return false;
+  },
+
+  /* ── input ───────────────────────────────────────────────────── */
+  onKey(e, editable) {
+    if (!this.running) return false;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' || e.key === 'Undo') {
+      if (!this.report && !this.panelStack.length) { this.undo(); return true; }
+      return true;   // swallow while a form is open
+    }
+    if (this.panelStack.length) return this.panelKey(e);
+    if (this.report) {
+      if (e.key === 'Enter') { this.submitReport(); return true; }
+      if (e.key === 'Escape') { this.closeReport(); return true; }
+      return false;  // let chars flow into the input
+    }
+    return false;
+  },
+
+  /* ── guide states ────────────────────────────────────────────── */
+  guideBelt() {
+    Guide.forCluster(1, ['MU', 'MD', 'ML', 'MR', 'LC'],
+      'Hold NAV (left thumb) · MU/MD/ML/MR steer the cursor · LC (left click) tags a ▲ red item');
+  },
+  guidePanel() {
+    Guide.forCluster(1, ['ArrowUp', 'ArrowDown'],
+      'Hold NAV · ↑/↓ on T & N move the list · Enter reports a ▲ entry · Esc closes');
+  },
+  guideName(target, typed) {
+    let i = 0;
+    while (i < typed.length && i < target.length && typed[i] === target[i]) i++;
+    if (typed === target) Guide.forKeyName('Enter', 'Ent — file the report');
+    else if (i < typed.length) Guide.forKeyName('Backspace', 'Bsp — fix the name');
+    else Guide.forChar(target[i], target[i] === ' ' ? 'Space' : undefined);
+  },
+
+  /* ── endings ─────────────────────────────────────────────────── */
+  elapsed() { return (performance.now() - this.t0) / 1000; },
+  fail(note) {
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    Save.record(this.def.id, false, null, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed: false, failNote: note,
+      rows: [['Bags cleared', `${this.bagsDone}/${this.def.bags}`], ['Reds reported', `${this.redsFiled}/${this.redsTotal}`],
+             ['False tags', this.falseTags], ['Name accuracy', this.nameAcc() + '%']],
+      onRetry: () => this.start(this.lv)
+    });
+  },
+  finish() {
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    const time = this.elapsed();
+    const nameAcc = this.nameAcc();
+    const passed = this.falseTags <= this.def.maxFalse && nameAcc >= this.def.nameAcc;
+    const stats = { time: Math.round(time), falseTags: this.falseTags, nameAcc };
+    Save.record(this.def.id, passed, stats, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed,
+      failNote: passed ? null : (this.falseTags > this.def.maxFalse ? 'Too many false tags.' : 'Item names typed too sloppily.'),
+      rows: [['Shift time', fmtTime(time)], ['Reds reported', `${this.redsFiled}/${this.redsTotal}`],
+             ['False tags', `${this.falseTags} (max ${this.def.maxFalse})`], ['Name accuracy', `${nameAcc}% (min ${this.def.nameAcc}%)`]],
+      onRetry: () => this.start(this.lv)
+    });
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   STAGE 3 — MAINTENANCE BAY (Layer 2 SYM + Layers 0 & 1)
+   Mini fake IDE: file tree, tabbed panes, live char-diff against
+   the ticket target, and a fake terminal. Nothing executes —
+   correctness is buffer vs target.
+   ════════════════════════════════════════════════════════════════ */
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = new Array(n + 1), cur = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    for (let j = 1; j <= n; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    [prev, cur] = [cur, prev];
+  }
+  return prev[n];
+}
+
+const Stage3 = {
+  lv: null, def: null, content: null,
+  filesState: {}, panes: [], zone: 0, ticketIdx: 0,
+  termNeeded: [], termProgress: 0,
+  keystrokes: 0, corrections: 0, minSum: 0,
+  fpGood: 0, fpBad: 0, lineTouched: {}, lineEvaluated: {},
+  timeLeft: 0, timer: null, running: false,
+  treeEl: null, centerEl: null, ticketEl: null, targetEl: null, termOut: null, termIn: null,
+
+  norm(s) { return s.split('\n').map(l => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, ''); },
+  ticket() { return this.content.tickets[this.ticketIdx] || null; },
+
+  start(lv) {
+    this.lv = lv; this.def = lv.def;
+    this.content = TICKETS[this.def.id];
+    this.filesState = { ...this.content.files };
+    this.panes = []; this.zone = 0; this.ticketIdx = 0;
+    this.keystrokes = 0; this.corrections = 0; this.minSum = 0;
+    this.fpGood = 0; this.fpBad = 0;
+    this.timeLeft = this.def.time; this.running = false;
+
+    const s = UI.clear(`${this.def.id} · MAINTENANCE BAY`);
+    const grid = el('div', 'ide');
+    this.treeEl = el('div', 'tree');
+    this.centerEl = el('div', 'center');
+    const tcol = el('div', 'ticketcol');
+    this.ticketEl = el('div', 'ticket');
+    this.targetEl = el('div', 'targetview');
+    tcol.append(this.ticketEl, this.targetEl);
+    const term = el('div', 'term');
+    this.termOut = el('div', 'tout', 'MAINT-BAY OS — fake terminal. PgDn cycles pane → terminal.\n');
+    const tline = el('div', 'tline', '<span style="color:var(--green)">$</span>');
+    this.termIn = el('input');
+    this.termIn.spellcheck = false;
+    tline.append(this.termIn);
+    term.append(this.termOut, tline);
+    this.termEl = term;
+    grid.append(this.treeEl, this.centerEl, tcol, term);
+    s.append(grid);
+
+    this.addPane();
+    this.renderTree();
+
+    this.termIn.addEventListener('keydown', (e) => {
+      this.countKey(e);
+      if (e.key === 'Enter') { this.runCmd(this.termIn.value); this.termIn.value = ''; e.preventDefault(); }
+    });
+    this.termIn.addEventListener('input', () => this.guideTerminal());
+    this.termIn.addEventListener('focus', () => this.setZone(this.panes.length));
+
+    UI.setCleanup(() => { clearInterval(this.timer); this.running = false; });
+    UI.briefing(s, `Work order — ${this.def.id} ${this.def.name}`, [
+      'Reproduce each ticket\'s target code <b>exactly</b> — mismatching lines glow red in your buffer.',
+      'Hold <kbd>SYM</kbd> (right thumb) for symbols: openers <kbd>( { [</kbd> sit on the LEFT home row, closers <kbd>) } ]</kbd> mirror on the RIGHT.',
+      'Select with home-row-mod Shift (<kbd>U</kbd>/<kbd>H</kbd>) + NAV arrows / Home / End. Copy, Cut, Paste and Undo live on the NAV layer.',
+      '<kbd>PgUp</kbd>/<kbd>PgDn</kbd> (NAV) cycle pane → split → terminal. Click works too. <kbd>Tab</kbd> indents 4 spaces.',
+      `Timer: ${fmtTime(this.def.time)} · first-pass line accuracy gate: ${this.def.firstPass}%.`
+    ], 'Clock in', () => {
+      this.running = true;
+      Keys.set({ capture: true, onKey: (e, ed) => this.onKey(e, ed) });
+      this.timer = setInterval(() => {
+        this.timeLeft -= 0.5;
+        if (this.timeLeft <= 0) this.fail('The shift timer ran out.');
+        this.hud();
+      }, 500);
+      this.setTicket(0);
+    });
+  },
+
+  /* ── panes & files ───────────────────────────────────────────── */
+  addPane() {
+    const idx = this.panes.length;
+    const dom = el('div', 'pane');
+    const tabsEl = el('div', 'tabs');
+    const wrap = el('div', 'edwrap');
+    const pre = el('pre');
+    const ta = document.createElement('textarea');
+    ta.spellcheck = false; ta.wrap = 'off';
+    wrap.append(pre, ta);
+    dom.append(tabsEl, wrap);
+    this.centerEl.append(dom);
+    const pane = { idx, dom, tabsEl, ta, pre, tabs: [], active: null, lastLine: null };
+    this.panes.push(pane);
+
+    ta.addEventListener('keydown', (e) => {
+      this.countKey(e);
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (!document.execCommand('insertText', false, '    ')) {
+          const st = ta.selectionStart;
+          ta.value = ta.value.slice(0, st) + '    ' + ta.value.slice(ta.selectionEnd);
+          ta.setSelectionRange(st + 4, st + 4);
+          ta.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+    ta.addEventListener('input', () => {
+      if (!pane.active) { ta.value = ''; return; }
+      this.filesState[pane.active] = ta.value;
+      const line = this.caretLine(ta);
+      this.lineTouched[pane.active + ':' + line] = true;
+      this.renderDiff(pane);
+      this.guideDiff();
+      this.checkTicket();
+    });
+    const caretWatch = () => this.trackCaret(pane);
+    ta.addEventListener('keyup', caretWatch);
+    ta.addEventListener('click', caretWatch);
+    ta.addEventListener('focus', () => this.setZone(idx));
+    ta.addEventListener('scroll', () => { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; });
+    this.renderTabs(pane);
+    return pane;
+  },
+  caretLine(ta) { return ta.value.slice(0, ta.selectionStart).split('\n').length - 1; },
+  trackCaret(pane) {
+    if (!pane.active) return;
+    const line = this.caretLine(pane.ta);
+    if (pane.lastLine !== null && line !== pane.lastLine) this.evalLine(pane, pane.lastLine);
+    pane.lastLine = line;
+  },
+  evalLine(pane, lineNo) {
+    const t = this.ticket();
+    if (!t || !t.file || pane.active !== t.file) return;
+    const key = pane.active + ':' + lineNo;
+    if (!this.lineTouched[key] || this.lineEvaluated[key]) return;
+    this.lineEvaluated[key] = true;
+    const cur = (this.filesState[pane.active] || '').split('\n')[lineNo] || '';
+    const tgt = t.after.split('\n')[lineNo];
+    if (tgt !== undefined && cur.replace(/\s+$/, '') === tgt.replace(/\s+$/, '')) this.fpGood++;
+    else this.fpBad++;
+    this.hud();
+  },
+  openFile(name, paneIdx) {
+    const pane = this.panes[paneIdx === undefined ? Math.min(this.zone, this.panes.length - 1) : paneIdx];
+    if (!pane.tabs.includes(name)) pane.tabs.push(name);
+    pane.active = name;
+    pane.ta.value = this.filesState[name];
+    pane.lastLine = null;
+    this.renderTabs(pane);
+    this.renderTree();
+    this.renderDiff(pane);
+  },
+  renderTabs(pane) {
+    pane.tabsEl.innerHTML = '';
+    if (!pane.tabs.length) pane.tabsEl.append(el('span', 'tab', 'no file — click one in the tree'));
+    pane.tabs.forEach(name => {
+      const t = el('span', 'tab' + (pane.active === name ? ' on' : ''), esc(name));
+      t.onclick = () => { this.setZone(pane.idx); this.openFile(name, pane.idx); pane.ta.focus(); };
+      pane.tabsEl.append(t);
+    });
+  },
+  renderTree() {
+    this.treeEl.innerHTML = '<div style="color:var(--amber);letter-spacing:.15em;font-size:11px;margin-bottom:6px">FILES</div>';
+    Object.keys(this.filesState).forEach(name => {
+      const open = this.panes.some(p => p.active === name);
+      const f = el('div', 'fitem' + (open ? ' open' : ''), '▸ ' + esc(name));
+      f.onclick = () => { this.openFile(name); this.panes[Math.min(this.zone, this.panes.length - 1)].ta.focus(); };
+      this.treeEl.append(f);
+    });
+    if (this.panes.length < 2) {
+      const b = el('button', 'btn', '⫶ Split pane');
+      b.style.cssText = 'margin-top:12px;font-size:11px;padding:4px 10px';
+      b.onclick = () => { this.addPane(); this.renderTree(); };
+      this.treeEl.append(b);
+    }
+  },
+  setZone(z) {
+    this.zone = z;
+    this.panes.forEach((p, i) => p.dom.classList.toggle('activePane', i === z));
+    this.termEl.classList.toggle('activePane', z === this.panes.length);
+  },
+  cycleZone(dir) {
+    const count = this.panes.length + 1;   // panes + terminal
+    const z = ((this.zone + dir) % count + count) % count;
+    this.setZone(z);
+    if (z < this.panes.length) this.panes[z].ta.focus(); else this.termIn.focus();
+  },
+
+  /* ── diff rendering ──────────────────────────────────────────── */
+  renderDiff(pane) {
+    const t = this.ticket();
+    const text = pane.active ? this.filesState[pane.active] : '';
+    if (!t || !t.file || pane.active !== t.file) {
+      pane.pre.innerHTML = esc(text) + '\n';
+      return;
+    }
+    const cur = text.split('\n'), tgt = t.after.split('\n');
+    pane.pre.innerHTML = cur.map((l, i) => {
+      const ok = tgt[i] !== undefined && l.replace(/\s+$/, '') === tgt[i].replace(/\s+$/, '');
+      const extra = i >= tgt.length && l.trim() === '';
+      return `<span class="${ok || extra ? 'ok' : 'bad'}">${esc(l) || ' '}</span>`;
+    }).join('\n') + '\n';
+  },
+
+  /* ── tickets ─────────────────────────────────────────────────── */
+  setTicket(i) {
+    this.ticketIdx = i;
+    if (i >= this.content.tickets.length) { this.finish(); return; }
+    const t = this.ticket();
+    this.termNeeded = t.terminal ? t.terminal.slice() : [];
+    this.termProgress = 0;
+    this.lineTouched = {}; this.lineEvaluated = {};
+    if (t.file) {
+      this.minSum += levenshtein(this.filesState[t.file], t.after);
+      this.openFile(t.file, 0);
+      this.setZone(0);
+      this.panes[0].ta.focus();
+    } else {
+      this.setZone(this.panes.length);
+      this.termIn.focus();
+    }
+    if (t.split && this.panes.length < 2) { this.addPane(); this.renderTree(); }
+    this.ticketEl.innerHTML =
+      `<div class="tid">Ticket ${i + 1}/${this.content.tickets.length} — ${esc(t.title)}</div>
+       <div class="brief">${esc(t.brief)}</div>`;
+    this.targetEl.innerHTML = t.file
+      ? `<div class="tv-head">TARGET — ${esc(t.file)}</div><pre>${esc(t.after)}</pre>`
+      : `<div class="tv-head">TARGET — terminal</div><pre>${t.terminal.map(c => '$ ' + esc(c)).join('\n')}</pre>`;
+    this.panes.forEach(p => this.renderDiff(p));
+    this.guideDiff();
+    this.hud();
+  },
+  checkTicket() {
+    const t = this.ticket();
+    if (!t || !t.file) return;
+    if (this.norm(this.filesState[t.file]) === this.norm(t.after) && this.termProgress >= this.termNeeded.length) {
+      // any touched-but-unleft lines match by definition now
+      Object.keys(this.lineTouched).forEach(k => { if (!this.lineEvaluated[k]) { this.lineEvaluated[k] = true; this.fpGood++; } });
+      Sound.good();
+      UI.toast(`Ticket closed: ${t.title}`);
+      this.setTicket(this.ticketIdx + 1);
+    }
+  },
+  runCmd(raw) {
+    const cmd = raw.trim();
+    if (!cmd) return;
+    this.termOut.textContent += '$ ' + cmd + '\n';
+    const t = this.ticket();
+    const expected = this.termNeeded[this.termProgress];
+    if (t && expected && cmd === expected) {
+      this.termProgress++;
+      this.termOut.textContent += `  ✔ ${expected.split(' ')[0]} acknowledged\n`;
+      Sound.good();
+      if (this.termProgress >= this.termNeeded.length) {
+        if (!t.file) { Sound.jingle(); UI.toast(`Ticket closed: ${t.title}`); this.setTicket(this.ticketIdx + 1); }
+        else this.checkTicket();
+      } else this.guideTerminal();
+    } else {
+      this.termOut.textContent += expected ? `  ✘ expected: ${expected}\n` : '  unknown command\n';
+      Sound.buzz();
+    }
+    this.termOut.scrollTop = this.termOut.scrollHeight;
+  },
+
+  /* ── input & stats ───────────────────────────────────────────── */
+  countKey(e) {
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key) || /^F\d{1,2}$/.test(e.key)) return;
+    this.keystrokes++;
+    if (e.key === 'Backspace' || e.key === 'Delete') this.corrections++;
+  },
+  onKey(e) {
+    if (!this.running) return false;
+    if (e.key === 'PageDown') { this.cycleZone(1); return true; }
+    if (e.key === 'PageUp') { this.cycleZone(-1); return true; }
+    if (e.key === 'Escape') return true;
+    return false;   // native editing (incl. Ctrl+C/X/V/Z/Y) stays untouched
+  },
+  fp() { const n = this.fpGood + this.fpBad; return n ? Math.round(100 * this.fpGood / n) : 100; },
+  hud() {
+    UI.hud(`<span>TICKET <b>${Math.min(this.ticketIdx + 1, this.content.tickets.length)}/${this.content.tickets.length}</b></span>
+      <span>TIME <b>${fmtTime(this.timeLeft)}</b></span>
+      <span>KEYS <b>+${Math.max(0, this.keystrokes - this.minSum)}</b> over min</span>
+      <span>FIRST-PASS <b>${this.fp()}%</b></span>`);
+  },
+
+  /* ── guide ───────────────────────────────────────────────────── */
+  guideDiff() {
+    const t = this.ticket();
+    if (!t || !t.file) { this.guideTerminal(); return; }
+    const cur = this.norm(this.filesState[t.file] || ''), tgt = this.norm(t.after);
+    if (cur === tgt) { Guide.idle('Buffer matches — ticket closing…'); return; }
+    let i = 0;
+    while (i < cur.length && i < tgt.length && cur[i] === tgt[i]) i++;
+    if (i >= tgt.length || (cur.length > tgt.length && cur.slice(0, i) === tgt.slice(0, i) && i === tgt.length)) {
+      Guide.forKeyName('Backspace', 'Bsp — trim the extra text'); return;
+    }
+    const ch = tgt[i];
+    if (ch === '\n') Guide.forKeyName('Enter');
+    else Guide.forChar(ch, ch === ' ' ? 'Space' : undefined);
+  },
+  guideTerminal() {
+    const expected = this.termNeeded[this.termProgress];
+    if (!expected) { Guide.idle(); return; }
+    const typed = this.termIn.value;
+    let i = 0;
+    while (i < typed.length && i < expected.length && typed[i] === expected[i]) i++;
+    if (typed === expected) Guide.forKeyName('Enter', 'Ent — run it');
+    else if (i < typed.length) Guide.forKeyName('Backspace', 'Bsp — fix the command');
+    else Guide.forChar(expected[i], expected[i] === ' ' ? 'Space' : undefined);
+  },
+
+  /* ── endings ─────────────────────────────────────────────────── */
+  fail(note) {
+    if (!this.running) return;
+    this.running = false;
+    clearInterval(this.timer);
+    Save.record(this.def.id, false, null, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed: false, failNote: note,
+      rows: [['Tickets closed', `${this.ticketIdx}/${this.content.tickets.length}`],
+             ['First-pass lines', this.fp() + '%'], ['Keystrokes over min', '+' + Math.max(0, this.keystrokes - this.minSum)]],
+      onRetry: () => this.start(this.lv)
+    });
+  },
+  finish() {
+    this.running = false;
+    clearInterval(this.timer);
+    const time = this.def.time - this.timeLeft;
+    const fp = this.fp();
+    const over = Math.max(0, this.keystrokes - this.minSum);
+    const passed = fp >= this.def.firstPass;
+    Save.record(this.def.id, passed, { time: Math.round(time), over, fp }, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed,
+      failNote: passed ? null : 'Too many lines needed a second pass.',
+      rows: [['Time', fmtTime(time)], ['Tickets', `${this.content.tickets.length}/${this.content.tickets.length}`],
+             ['First-pass lines', `${fp}% (min ${this.def.firstPass}%)`],
+             ['Keystrokes over min', '+' + over]],
+      onRetry: () => this.start(this.lv)
+    });
+  }
+};
+/* ════════════════════════════════════════════════════════════════
+   STAGE 4 — CORNE-TROLL TOWER (Layer 3 FN)
+   F-key tags select inbound planes, Tab cycles duplicates,
+   Enter clears the closest one to land. Optional FN-numpad
+   heading prompts in 4-4/4-5.
+   ════════════════════════════════════════════════════════════════ */
+const Stage4 = {
+  lv: null, def: null,
+  field: null, msgEl: null, npEl: null,
+  planes: [], landed: 0, wrongSel: 0, spawnClock: 0, planeSeq: 0,
+  sel: null,               // { tag, idx }
+  runwayBusy: false, numpad: null,   // { plane, code, typed }
+  raf: 0, lastT: 0, running: false, t0: 0, lastGuideKey: '',
+
+  AIRLINES: ['DAL', 'UAL', 'AAL', 'SWA', 'JBU', 'KLM', 'ANA', 'QFA', 'PAL', 'CEB'],
+
+  start(lv) {
+    this.lv = lv; this.def = lv.def;
+    const s = UI.clear(`${lv.def.id} · CORNE-TROLL TOWER`);
+    const w = el('div', 'tw-wrap');
+    w.append(el('div', 'tw-hud',
+      `<span>LANDED <b id="t-land">0/${this.def.land}</b></span>
+       <span>WRONG <b id="t-wrong">0</b>/${this.def.maxWrong}</span>
+       <span>AIRBORNE <b id="t-air">0</b></span>
+       <span>TIME <b id="t-time">0:00</b></span>`));
+    this.field = el('div', 'radar');
+    [140, 280, 430].forEach(r => {
+      const ring = el('div', 'ring');
+      ring.style.cssText = `width:${r * 2}px;height:${r * 2}px;left:calc(50% - ${r}px);bottom:${60 - r}px`;
+      this.field.append(ring);
+    });
+    this.runwayEl = el('div', 'runway');
+    this.field.append(this.runwayEl);
+    this.msgEl = el('div', 'tw-msg');
+    this.msgEl.style.display = 'none';
+    this.field.append(this.msgEl);
+    w.append(this.field);
+    s.append(w);
+
+    this.planes = []; this.landed = 0; this.wrongSel = 0; this.sel = null;
+    this.runwayBusy = false; this.numpad = null; this.spawnClock = 0; this.planeSeq = 0;
+    this.running = false; this.lastGuideKey = '';
+
+    UI.setCleanup(() => { cancelAnimationFrame(this.raf); this.running = false; });
+    UI.briefing(this.field, `Tower briefing — ${this.def.id} ${this.def.name}`, [
+      'Every inbound plane carries an <b>F-key tag</b>. Hold <kbd>FN</kbd> (right thumb, outer) — F1–F12 sit on the LEFT hand in a 3×4 grid.',
+      'Press the tag of the plane <b>closest to the runway</b>. Shared tags? <kbd>Tab</kbd> cycles the candidates.',
+      '<kbd>Enter</kbd> clears the selected plane to land. Clearing the wrong plane = go-around penalty.',
+      'Planes burn holding fuel — a single fuel-out fails the shift.' +
+        (this.def.numpad ? ' Some clearances ask for a heading on the FN numpad (right hand).' : ''),
+      `Land ${this.def.land} · at most ${this.def.maxWrong} wrong clearances.`
+    ], 'Open the frequency', () => this.go());
+  },
+
+  go() {
+    this.running = true;
+    this.t0 = performance.now(); this.lastT = this.t0;
+    for (let i = 0; i < this.def.initial; i++) this.spawn(0.35 + i * 0.18);
+    Keys.set({ capture: true, onKey: (e) => this.onKey(e) });
+    this.guideClosest(true);
+    const loop = (t) => {
+      if (!this.running) return;
+      const dt = Math.min(0.1, (t - this.lastT) / 1000);
+      this.lastT = t;
+      this.tick(dt);
+      this.raf = requestAnimationFrame(loop);
+    };
+    this.raf = requestAnimationFrame(loop);
+  },
+
+  threshold() {
+    return { x: this.field.clientWidth / 2, y: this.field.clientHeight - 60 };
+  },
+  dist(p) { const th = this.threshold(); return Math.hypot(p.x - th.x, p.y - th.y); },
+  alive() { return this.planes.filter(p => !p.dead && !p.landing); },
+  closest() {
+    const a = this.alive();
+    return a.length ? a.reduce((m, p) => this.dist(p) < this.dist(m) ? p : m) : null;
+  },
+
+  spawn(distFrac) {
+    const W = this.field.clientWidth, H = this.field.clientHeight;
+    const th = this.threshold();
+    const ang = rnd(Math.PI * 0.15, Math.PI * 0.85);   // fan above the runway
+    const R = (distFrac !== undefined ? distFrac : 1) * Math.min(H - 90, W * 0.48);
+    const p = {
+      id: ++this.planeSeq,
+      callsign: pick(this.AIRLINES) + irnd(100, 999),
+      tag: this.pickTag(),
+      x: th.x + Math.cos(ang) * R * (Math.random() < 0.5 ? -1 : 1),
+      y: th.y - Math.sin(ang) * R,
+      speed: rnd(this.def.speed[0], this.def.speed[1]),
+      fuelMax: this.def.fuel, fuel: this.def.fuel,
+      landing: false, dead: false, dom: null
+    };
+    p.x = Math.max(30, Math.min(W - 30, p.x));
+    p.y = Math.max(30, Math.min(th.y - 80, p.y));
+    const d = el('div', 'plane',
+      `<span class="ftag">${p.tag}</span><span class="icon" style="color:var(--green)">▲</span>
+       <span class="fuel"><i style="width:100%"></i></span><span class="callsign">${p.callsign}</span>`);
+    p.dom = d;
+    this.field.append(d);
+    this.planes.push(p);
+  },
+  pickTag() {
+    const pool = Array.from({ length: this.def.tags }, (_, i) => 'F' + (i + 1));
+    if (this.def.dup) return pick(pool);
+    const used = this.alive().map(p => p.tag);
+    const free = pool.filter(t => !used.includes(t));
+    return free.length ? pick(free) : pick(pool);
+  },
+
+  tick(dt) {
+    const th = this.threshold();
+    // spawning
+    this.spawnClock += dt;
+    if (this.spawnClock >= this.def.spawnEvery && this.alive().length < this.def.maxPlanes) {
+      this.spawnClock = 0;
+      this.spawn();
+    }
+    for (const p of this.planes) {
+      if (p.dead) continue;
+      const d = this.dist(p);
+      const vx = (th.x - p.x) / (d || 1), vy = (th.y - p.y) / (d || 1);
+      if (p.landing) {
+        p.x += vx * 95 * dt; p.y += vy * 95 * dt;
+        if (d < 10) { this.touchdown(p); continue; }
+      } else {
+        if (d > 46) { p.x += vx * p.speed * dt; p.y += vy * p.speed * dt; }
+        else { p.x += Math.sin(performance.now() / 500 + p.id) * 6 * dt; }   // hold pattern
+        if (!(this.numpad && this.numpad.plane === p)) p.fuel -= dt;
+        if (p.fuel <= 0) { this.failLevel(`${p.callsign} flamed out — a plane ran dry.`); return; }
+      }
+      this.drawPlane(p, th);
+    }
+    this.hud();
+    this.guideClosest();
+  },
+  drawPlane(p, th) {
+    p.dom.style.left = p.x + 'px';
+    p.dom.style.top = p.y + 'px';
+    const angle = Math.atan2(th.y - p.y, th.x - p.x) * 180 / Math.PI + 90;
+    p.dom.querySelector('.icon').style.transform = `rotate(${angle}deg)`;
+    const f = p.dom.querySelector('.fuel i');
+    const frac = Math.max(0, p.fuel / p.fuelMax);
+    f.style.width = (frac * 100) + '%';
+    f.classList.toggle('low', frac < 0.25);
+  },
+
+  /* ── selection ───────────────────────────────────────────────── */
+  candidates(tag) {
+    return this.alive().filter(p => p.tag === tag).sort((a, b) => this.dist(a) - this.dist(b));
+  },
+  refreshSelection() {
+    this.planes.forEach(p => { if (p.dom) { p.dom.classList.remove('sel', 'candidate'); } });
+    if (!this.sel) return;
+    const cands = this.candidates(this.sel.tag);
+    if (!cands.length) { this.sel = null; return; }
+    this.sel.idx = this.sel.idx % cands.length;
+    cands.forEach((p, i) => p.dom.classList.add(i === this.sel.idx ? 'sel' : 'candidate'));
+  },
+  selectedPlane() {
+    if (!this.sel) return null;
+    const cands = this.candidates(this.sel.tag);
+    return cands.length ? cands[this.sel.idx % cands.length] : null;
+  },
+
+  onKey(e) {
+    if (!this.running) return false;
+    const k = e.key;
+    if (this.numpad) {
+      if (/^[0-9]$/.test(k)) { this.numpad.typed += k; this.renderNumpad(); Sound.tick(); return true; }
+      if (k === 'Backspace') { this.numpad.typed = this.numpad.typed.slice(0, -1); this.renderNumpad(); return true; }
+      if (k === 'Enter') {
+        if (this.numpad.typed === this.numpad.code) { const p = this.numpad.plane; this.closeNumpad(); this.land(p); }
+        else { Sound.buzz(); this.numpad.typed = ''; this.renderNumpad(); this.say('Wrong heading — again.'); }
+        return true;
+      }
+      return true;   // swallow everything else during the prompt
+    }
+    if (/^F\d{1,2}$/.test(k)) {
+      const cands = this.candidates(k);
+      if (!cands.length) { Sound.buzz(); this.say(`No traffic squawking ${k}.`); return true; }
+      this.sel = { tag: k, idx: 0 };
+      Sound.blip();
+      this.refreshSelection();
+      this.guideSelection();
+      return true;
+    }
+    if (k === 'Tab') {
+      if (this.sel) {
+        const n = this.candidates(this.sel.tag).length;
+        if (n > 1) { this.sel.idx = (this.sel.idx + 1) % n; Sound.blip(); this.refreshSelection(); }
+      }
+      return true;
+    }
+    if (k === 'Enter') {
+      const p = this.selectedPlane();
+      if (!p) { Sound.buzz(); this.say('Select a tag first (FN + F-key).'); return true; }
+      if (this.runwayBusy) { Sound.buzz(); this.say('Runway occupied — hold.'); return true; }
+      const closest = this.closest();
+      if (p !== closest) {
+        this.wrongSel++;
+        Sound.buzz();
+        this.say(`${p.callsign} go-around! ${closest ? closest.callsign + ' was next.' : ''}`);
+        // loop the plane back out: it re-enters from further away, time is lost
+        const th = this.threshold();
+        const d = this.dist(p);
+        const push = Math.min(d * 0.4 + 120, 260);
+        const nx = p.x + (p.x - th.x) / (d || 1) * push, ny = p.y - Math.abs(push * 0.7);
+        p.x = Math.max(30, Math.min(this.field.clientWidth - 30, nx));
+        p.y = Math.max(30, ny);
+        this.sel = null;
+        this.refreshSelection();
+        if (this.wrongSel > this.def.maxWrong) { this.failLevel('Too many wrong clearances — the chief pulls your headset.'); }
+        return true;
+      }
+      if (this.def.numpad && Math.random() < CONFIG.numpadChance) { this.openNumpad(p); return true; }
+      this.land(p);
+      return true;
+    }
+    return false;
+  },
+
+  land(p) {
+    p.landing = true;
+    this.runwayBusy = true;
+    this.runwayEl.classList.add('busy');
+    this.sel = null;
+    this.refreshSelection();
+    this.say(`${p.callsign} cleared to land.`);
+    Sound.good();
+  },
+  touchdown(p) {
+    p.dead = true;
+    p.dom.remove();
+    this.landed++;
+    Sound.good();
+    setTimeout(() => { this.runwayBusy = false; this.runwayEl.classList.remove('busy'); }, 800);
+    if (this.def.reshuffle) {
+      this.alive().forEach(q => { q.tag = this.pickTag(); q.dom.querySelector('.ftag').textContent = q.tag; });
+      this.sel = null;
+      this.refreshSelection();
+      this.say('Storm cell — tags reshuffled!');
+    }
+    if (this.landed >= this.def.land) this.finish();
+  },
+
+  /* ── FN numpad prompt (optional flavour, config-gated) ───────── */
+  openNumpad(p) {
+    const code = String(irnd(0, 35) * 10).padStart(3, '0');
+    this.numpad = { plane: p, code, typed: '' };
+    this.npEl = el('div', 'tw-numpad');
+    this.field.append(this.npEl);
+    this.renderNumpad();
+  },
+  renderNumpad() {
+    const n = this.numpad;
+    this.npEl.innerHTML =
+      `<div style="font-size:12px;color:var(--dim)">TOWER: "${n.plane.callsign}, say heading <b style="color:var(--amber)">${n.code}</b>" — FN numpad, then Enter</div>
+       <div class="np-in">${esc(n.typed) || '···'}</div>`;
+    const next = n.code[n.typed.length];
+    if (n.typed === n.code) Guide.forKeyName('Enter', 'Ent — read back complete');
+    else if (next) Guide.forChar(next, `${next} (FN numpad)`);
+    else Guide.forKeyName('Backspace', 'Bsp — too many digits');
+  },
+  closeNumpad() {
+    if (this.npEl) this.npEl.remove();
+    this.numpad = null;
+  },
+
+  /* ── guide & hud ─────────────────────────────────────────────── */
+  guideClosest(force) {
+    if (this.numpad) return;
+    if (this.sel) return;      // selection guide is active
+    const c = this.closest();
+    if (!c) return;
+    const key = 'closest:' + c.tag + c.id;
+    if (!force && key === this.lastGuideKey) return;
+    this.lastGuideKey = key;
+    Guide.forChar(c.tag, `${c.tag} — select ${c.callsign} (closest)`);
+  },
+  guideSelection() {
+    this.lastGuideKey = 'sel';
+    Guide.forCluster(0, ['Tab', 'Enter'],
+      'Tab cycles planes sharing the tag · Enter clears the selected plane to land');
+  },
+  say(msg) {
+    this.msgEl.textContent = msg;
+    this.msgEl.style.display = 'block';
+    clearTimeout(this._sayT);
+    this._sayT = setTimeout(() => { this.msgEl.style.display = 'none'; }, 2600);
+  },
+  hud() {
+    const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+    set('t-land', `${this.landed}/${this.def.land}`);
+    set('t-wrong', this.wrongSel);
+    set('t-air', this.alive().length);
+    set('t-time', fmtTime((performance.now() - this.t0) / 1000));
+  },
+
+  /* ── endings ─────────────────────────────────────────────────── */
+  failLevel(note) {
+    if (!this.running) return;
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    this.closeNumpad();
+    Save.record(this.def.id, false, null, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed: false, failNote: note,
+      rows: [['Landed', `${this.landed}/${this.def.land}`], ['Wrong clearances', this.wrongSel],
+             ['Time', fmtTime((performance.now() - this.t0) / 1000)]],
+      onRetry: () => this.start(this.lv)
+    });
+  },
+  finish() {
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    this.closeNumpad();
+    const time = (performance.now() - this.t0) / 1000;
+    const passed = this.wrongSel <= this.def.maxWrong;
+    Save.record(this.def.id, passed, { time: Math.round(time), wrong: this.wrongSel }, 'time', true);
+    UI.results({
+      levelId: this.def.id, passed,
+      failNote: passed ? null : 'Too many wrong clearances.',
+      rows: [['Landed', `${this.landed}/${this.def.land}`],
+             ['Wrong clearances', `${this.wrongSel} (max ${this.def.maxWrong})`],
+             ['Shift time', fmtTime(time)]],
+      onRetry: () => this.start(this.lv)
+    });
+  }
+};
+/* ── boot ───────────────────────────────────────────────────────── */
+Save.load();
+UI.init();
+Keys.install();
+Guide.init();
+document.addEventListener('pointerdown', () => Sound.musicStart(), { once: true });
+document.addEventListener('keydown', () => Sound.musicStart(), { once: true });
+Screens.menu();
+if (!Save.canStore) UI.toast('Heads-up: storage is unavailable, progress lives only in this session.');
+</script>
+</body>
+</html>
