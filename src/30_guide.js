@@ -52,9 +52,9 @@ const Guide = {
     const body = el('div', 'g-body');
     const L = KEYMAP.layers[layer];
     const hit = (list, side, row, col) => list.some(p => p.side === side && String(p.row) === String(row) && p.col === col);
-    const mkKey = (cell, side, row, col, thumb) => {
-      const k = el('div', 'key' + (thumb ? ' thumb' : ''));
-      if (cell.blank) { k.classList.add('blank'); k.textContent = ''; return k; }
+    const mkKey = (cell, side, row, col, kind) => {
+      const k = el('div', 'key' + (kind === 'thumb' ? ' thumb' : '') + (kind === 'edge' ? ' edgekey' : ''));
+      if (!cell || cell.blank) { k.classList.add('blank'); return k; }
       if (cell.trans) { k.classList.add('transparent'); k.textContent = '▽'; return k; }
       k.append(el('span', null, esc(cell.l)));
       if (cell.sub) k.append(el('span', 'sub', esc(cell.sub)));
@@ -63,16 +63,38 @@ const Guide = {
       if (hit(holds, side, row, col)) k.classList.add('hold');
       return k;
     };
+    // ergonomic column stagger — "up" amounts (outer→inner for L, mirrored for R)
+    const STAG_L = [10, 10, 20, 26, 14, 4], STAG_R = [4, 14, 26, 20, 10, 10], MAX = 26;
     const half = (side) => {
-      const h = el('div', 'kb-half ' + (side === 'L' ? 'left' : 'right'));
-      const rows = side === 'L' ? L.left : L.right;
-      rows.forEach((r, ri) => {
-        const rowEl = el('div', 'kb-row');
-        r.forEach((c, ci) => rowEl.append(mkKey(c, side, ri, ci, false)));
-        h.append(rowEl);
-      });
+      const isL = side === 'L';
+      const h = el('div', 'kb-half ' + (isL ? 'left' : 'right'));
+      const rows = isL ? L.left : L.right;
+      const thumbs = isL ? L.leftThumbs : L.rightThumbs;
+      const stag = isL ? STAG_L : STAG_R;
+      // 6 staggered finger columns
+      const grid = el('div', 'kb-grid');
+      for (let col = 0; col < 6; col++) {
+        const colEl = el('div', 'kb-col');
+        colEl.style.marginTop = (MAX - stag[col]) + 'px';
+        for (let ri = 0; ri < 3; ri++) colEl.append(mkKey(rows[ri][col], side, ri, col, ''));
+        grid.append(colEl);
+      }
+      // edge column of extra keys: left = inner (- / Bsp), right = outer (Bsp / ' / Del)
+      const edge = el('div', 'kb-col kb-edge');
+      edge.style.marginTop = (MAX - (isL ? 4 : 8)) + 'px';
+      if (isL) edge.append(el('div', 'key blank'), mkKey(thumbs[0], side, 'T', 0, 'edge'), mkKey(thumbs[1], side, 'T', 1, 'edge'));
+      else edge.append(mkKey(thumbs[3], side, 'T', 3, 'edge'), mkKey(thumbs[4], side, 'T', 4, 'edge'), mkKey(thumbs[5], side, 'T', 5, 'edge'));
+      grid.append(edge);
+      h.append(grid);
+      // 3-key thumb cluster, fanned outward
       const th = el('div', 'kb-thumbs');
-      (side === 'L' ? L.leftThumbs : L.rightThumbs).forEach((c, ci) => th.append(mkKey(c, side, 'T', ci, true)));
+      const idxs = isL ? [3, 4, 5] : [0, 1, 2];
+      const rot = isL ? [0, 9, 18] : [-18, -9, 0];
+      idxs.forEach((ci, i) => {
+        const key = mkKey(thumbs[ci], side, 'T', ci, 'thumb');
+        key.style.transform = `rotate(${rot[i]}deg)`;
+        th.append(key);
+      });
       h.append(th);
       return h;
     };
