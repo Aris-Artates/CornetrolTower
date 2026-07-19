@@ -43,7 +43,9 @@ const CONFIG = {
     { id:'3-2', name:'Literal overhaul', time:360, firstPass:60 },
     { id:'3-3', name:'Comment surgery',  time:360, firstPass:60 },
     { id:'3-4', name:'Two-file job',     time:420, firstPass:65 },
-    { id:'3-5', name:'The full ticket',  time:540, firstPass:65 }
+    { id:'3-5', name:'The full ticket',  time:540, firstPass:65 },
+    { id:'3-6', name:'Syntax sprint',    mode:'flow', gate:{wpm:24, acc:93}, groups:34,
+      layers:[0, 2, 3], difficulty:'normal' }   // Monkeytype-style code flow-typing
   ],
 
   /* ── Stage 4 ──────────────────────────────────────────────────── */
@@ -54,7 +56,22 @@ const CONFIG = {
     { id:'4-4', name:'Full board',     tags:12, land:10, maxWrong:2, fuel:60, spawnEvery:4.2, speed:[9,14],  dup:true,  initial:5, maxPlanes:7, reshuffle:false, numpad:true },
     { id:'4-5', name:'Storm shift',    tags:12, land:12, maxWrong:1, fuel:45, spawnEvery:3.6, speed:[10,15], dup:true,  initial:5, maxPlanes:8, reshuffle:true,  numpad:true }
   ],
-  numpadChance: 0.35   // odds a 4-4/4-5 landing asks for a heading (FN numpad)
+  numpadChance: 0.35,   // odds a 4-4/4-5 landing asks for a heading (FN numpad)
+
+  /* ── Code-type engine (Stage 3 flow level + Practice minigame) ──── */
+  codetype: {
+    // difficulty presets: gib = gibberish ratio, code = real-code-line ratio,
+    // navRate = chance of a NAV key token per group, wordLen = gibberish length
+    difficulties: {
+      easy:   { label: 'Easy',   gib: 0.12, code: 0.25, navRate: 0.05, wordLen: [3, 6] },
+      normal: { label: 'Normal', gib: 0.28, code: 0.42, navRate: 0.10, wordLen: [3, 8] },
+      hard:   { label: 'Hard',   gib: 0.45, code: 0.58, navRate: 0.16, wordLen: [4, 10] },
+      insane: { label: 'Insane', gib: 0.62, code: 0.72, navRate: 0.22, wordLen: [5, 13] }
+    },
+    wordCounts: [25, 50, 100],   // "words" length options
+    times: [15, 30, 60],         // timed length options (seconds)
+    codeWordWeight: 3            // a code line counts as this many "words" toward length
+  }
 };
 
 /* ════════════════════════════════════════════════════════════════

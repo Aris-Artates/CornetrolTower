@@ -26,6 +26,7 @@ function prevLevelId(id) { const i = LEVELS.findIndex(l => l.id === id); return 
 function nextLevelId(id) { const i = LEVELS.findIndex(l => l.id === id); return i >= 0 && i < LEVELS.length - 1 ? LEVELS[i + 1].id : null; }
 function gateSummary(id) {
   const { stage, def } = levelAt(id);
+  if (def.mode === 'flow') return `${def.gate.wpm} WPM @ ${def.gate.acc}% (code flow)`;
   if (stage === 1) return `${def.gate.wpm} WPM @ ${def.gate.acc}%`;
   if (stage === 2) return `all reds · ≤${def.maxFalse} false tags · names ≥${def.nameAcc}% · ${fmtTime(def.time)}`;
   if (stage === 3) return `all tickets exact · first-pass ≥${def.firstPass}% · ${fmtTime(def.time)}`;

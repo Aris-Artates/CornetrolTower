@@ -10,6 +10,7 @@ cat src/00_head.html \
     src/40_stage1.js \
     src/45_tickets.js \
     src/50_stage2.js \
+    src/55_codetype.js \
     src/60_stage3.js \
     src/70_stage4.js \
     src/90_boot.js \

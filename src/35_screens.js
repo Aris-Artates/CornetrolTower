@@ -13,6 +13,7 @@ const Screens = {
     const mk = (label, fn) => { const b = el('button', 'btn', label); b.onclick = fn; return b; };
     list.append(
       mk('Play', () => Screens.stages()),
+      mk('Practice', () => CodeType.openPractice()),
       mk('Settings', () => Screens.settings()),
       mk('Credits', () => Screens.credits()));
     w.append(list);
@@ -135,7 +136,8 @@ const Screens = {
       let bestLine = '';
       if (rec && rec.best) {
         const b = rec.best;
-        if (stageNum === 1) bestLine = `${b.wpm} WPM · ${b.acc}%`;
+        if (def.mode === 'flow') bestLine = `${b.wpm} WPM · ${b.acc}%`;
+        else if (stageNum === 1) bestLine = `${b.wpm} WPM · ${b.acc}%`;
         else if (stageNum === 2) bestLine = `${fmtTime(b.time)} · ${b.falseTags} false · ${b.nameAcc}% names`;
         else if (stageNum === 3) bestLine = `${fmtTime(b.time)} · +${b.over} keys · ${b.fp}% first-pass`;
         else bestLine = `${fmtTime(b.time)} · ${b.wrong} wrong picks`;

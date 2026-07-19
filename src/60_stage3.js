@@ -31,6 +31,7 @@ const Stage3 = {
   ticket() { return this.content.tickets[this.ticketIdx] || null; },
 
   start(lv) {
+    if (lv.def.mode === 'flow') return CodeType.startLevel(lv);   // Monkeytype-style code flow
     this.lv = lv; this.def = lv.def;
     this.content = TICKETS[this.def.id];
     this.filesState = { ...this.content.files };
