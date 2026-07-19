@@ -1,10 +1,12 @@
 /* ════════════════════════════════════════════════════════════════
-   KEYMAP — 46-KEY CORNE, DVORAK PROGRAMMER (v1)
-   Encoded verbatim from the spec appendix. Single source of truth:
-   every diagram, hint and drill reads from this structure.
+   KEYMAP — 46-KEY CORNE, DVORAK PROGRAMMER
+   Decoded from the player's Vial layout (keyboard.vil). Single source
+   of truth: every diagram, hint and drill reads from this structure.
+   Thumb arrays hold the full bottom row (6 slots/side): the 3 real
+   thumb keys plus the bottom-outer extras (Minus/Bsp, Quote/Del …).
    Cell: { l:label, k:output (KeyboardEvent.key), s:shifted output,
            sub:home-row-mod label, hold:layer this thumb activates,
-           blank:true (no-op), trans:true (▽ transparent) }
+           held:layer held here, blank:true (no-op), trans:true (▽) }
    ════════════════════════════════════════════════════════════════ */
 const KEYMAP = {
   layerNames: ['BASE', 'NAV & MOUSE', 'SYM', 'FN'],
@@ -17,40 +19,40 @@ const KEYMAP = {
         [{l:'Sft'},{l:';',k:';',s:':'},{l:'Q',k:'q'},{l:'J',k:'j'},{l:'K',k:'k'},{l:'X',k:'x'}]
       ],
       right: [
-        [{l:'F',k:'f'},{l:'G',k:'g'},{l:'C',k:'c'},{l:'R',k:'r'},{l:'L',k:'l'},{l:'/',k:'/',s:'?'}],
-        [{l:'D',k:'d'},{l:'H',k:'h',sub:'Sft'},{l:'T',k:'t',sub:'Ctl'},{l:'N',k:'n',sub:'Alt'},{l:'S',k:'s',sub:'GUI'},{l:'-',k:'-',s:'_'}],
-        [{l:'B',k:'b'},{l:'M',k:'m'},{l:'W',k:'w'},{l:'V',k:'v'},{l:'Z',k:'z'},{l:'Sft'}]
+        [{l:'Mute'},{l:'F',k:'f'},{l:'G',k:'g'},{l:'C',k:'c'},{l:'R',k:'r'},{l:'L',k:'l'}],
+        [{l:'/',k:'/',s:'?'},{l:'D',k:'d'},{l:'H',k:'h',sub:'Sft'},{l:'T',k:'t',sub:'Ctl'},{l:'N',k:'n',sub:'Alt'},{l:'S',k:'s',sub:'GUI'}],
+        [{blank:true},{l:'B',k:'b'},{l:'M',k:'m'},{l:'W',k:'w'},{l:'V',k:'v'},{l:'Z',k:'z'}]
       ],
-      leftThumbs: [{l:'NAV',hold:'NAV'},{l:'Spc/Sft',k:' '},{l:'Bsp',k:'Backspace'}],
-      rightThumbs: [{l:'Ent',k:'Enter'},{l:'SYM',hold:'SYM'},{l:'FN',hold:'FN'}]
+      leftThumbs: [{l:'-',k:'-',s:'_'},{l:'Bsp',k:'Backspace'},{blank:true},{l:'NAV',hold:'NAV'},{l:'Spc/Sft',k:' '},{l:'Tab',k:'Tab'}],
+      rightThumbs: [{l:'Ent',k:'Enter'},{l:'SYM',hold:'SYM'},{l:'FN',hold:'FN'},{l:'Bsp',k:'Backspace'},{l:"'",k:"'",s:'"'},{l:'Del',k:'Delete'}]
     },
     { // ── LAYER 1 — NAV & MOUSE (hold left thumb / NAV) ──
       left: [
-        [{trans:true},{l:'RC',k:'RC'},{l:'MU',k:'MU'},{l:'LC',k:'LC'},{l:'WU',k:'WU'},{blank:true}],
-        [{trans:true},{l:'ML',k:'ML'},{l:'MD',k:'MD'},{l:'MR',k:'MR'},{l:'WD',k:'WD'},{blank:true}],
-        [{trans:true},{blank:true},{l:'WL',k:'WL'},{l:'WR',k:'WR'},{blank:true},{blank:true}]
+        [{trans:true},{l:'Prev'},{l:'MU',k:'MU'},{l:'Next'},{l:'RC',k:'RC'},{l:'WU',k:'WU'}],
+        [{trans:true},{l:'ML',k:'ML'},{l:'MD',k:'MD'},{l:'MR',k:'MR'},{l:'LC',k:'LC'},{l:'WD',k:'WD'}],
+        [{trans:true},{trans:true},{l:'WL',k:'WL'},{l:'WR',k:'WR'},{trans:true},{trans:true}]
       ],
       right: [
-        [{l:'Undo',k:'Undo'},{l:'Redo',k:'Redo'},{l:'Cut',k:'Cut'},{l:'Copy',k:'Copy'},{l:'Pste',k:'Paste'},{trans:true}],
-        [{l:'Home',k:'Home'},{l:'←',k:'ArrowLeft'},{l:'↓',k:'ArrowDown'},{l:'↑',k:'ArrowUp'},{l:'→',k:'ArrowRight'},{l:'End',k:'End'}],
-        [{l:'PgUp',k:'PageUp'},{l:'PgDn',k:'PageDown'},{l:'MC',k:'MC'},{blank:true},{blank:true},{trans:true}]
+        [{l:'→L4'},{l:'Undo',k:'Undo'},{l:'Redo',k:'Redo'},{l:'Cut',k:'Cut'},{l:'Copy',k:'Copy'},{l:'Pste',k:'Paste'}],
+        [{trans:true},{l:'Home',k:'Home'},{l:'←',k:'ArrowLeft'},{l:'↑',k:'ArrowUp'},{l:'↓',k:'ArrowDown'},{l:'→',k:'ArrowRight'}],
+        [{blank:true},{l:'PgUp',k:'PageUp'},{l:'PgDn',k:'PageDown'},{l:'MC',k:'MC'},{l:'End',k:'End'},{trans:true}]
       ],
-      leftThumbs: [{l:'▽▽▽',held:'NAV'},{l:'LC',k:'LC'},{l:'RC',k:'RC'}],
-      rightThumbs: [{l:'Ent',k:'Enter'},{trans:true},{trans:true}]
+      leftThumbs: [{l:'PrtSc',k:'PrintScreen'},{trans:true},{blank:true},{l:'▽▽▽',held:'NAV'},{trans:true},{trans:true}],
+      rightThumbs: [{l:'Ent',k:'Enter'},{trans:true},{trans:true},{trans:true},{trans:true},{trans:true}]
     },
     { // ── LAYER 2 — SYM (hold right thumb / SYM) ──
       left: [
         [{l:'~',k:'~'},{l:'!',k:'!'},{l:'@',k:'@'},{l:'#',k:'#'},{l:'$',k:'$'},{l:'%',k:'%'}],
-        [{trans:true},{l:'(',k:'(',sub:'GUI'},{l:'{',k:'{',sub:'Alt'},{l:'[',k:'[',sub:'Ctl'},{l:'<',k:'<',sub:'Sft'},{l:'=',k:'='}],
+        [{l:'`',k:'`'},{l:'(',k:'('},{l:'{',k:'{'},{l:'[',k:'['},{l:'<',k:'<'},{l:'=',k:'='}],
         [{trans:true},{l:'_',k:'_'},{l:':',k:':'},{l:';',k:';'},{l:'?',k:'?'},{l:'/',k:'/'}]
       ],
       right: [
-        [{l:'^',k:'^'},{l:'&',k:'&'},{l:'*',k:'*'},{l:'\\',k:'\\'},{l:'|',k:'|'},{l:'`',k:'`'}],
-        [{l:'+',k:'+'},{l:'>',k:'>',sub:'Sft'},{l:')',k:')',sub:'Ctl'},{l:'}',k:'}',sub:'Alt'},{l:']',k:']',sub:'GUI'},{l:'"',k:'"'}],
-        [{l:'-',k:'-'},{l:'&',k:'&'},{l:'|',k:'|'},{l:'.',k:'.'},{l:',',k:','},{trans:true}]
+        [{trans:true},{l:'^',k:'^'},{l:'&',k:'&'},{l:'*',k:'*'},{l:'\\',k:'\\'},{l:'|',k:'|'}],
+        [{trans:true},{l:'+',k:'+'},{l:'>',k:'>'},{l:')',k:')'},{l:'}',k:'}'},{l:']',k:']'}],
+        [{blank:true},{l:'-',k:'-'},{l:'&',k:'&'},{l:'|',k:'|'},{l:'.',k:'.'},{l:',',k:','}]
       ],
-      leftThumbs: [{l:'Spc',k:' '},{trans:true},{trans:true}],
-      rightThumbs: [{trans:true},{l:'▽▽▽',held:'SYM'},{trans:true}]
+      leftThumbs: [{trans:true},{trans:true},{blank:true},{l:'Spc',k:' '},{trans:true},{trans:true}],
+      rightThumbs: [{trans:true},{l:'▽▽▽',held:'SYM'},{trans:true},{trans:true},{trans:true},{trans:true}]
     },
     { // ── LAYER 3 — FN (hold right thumb / FN) ──
       left: [
@@ -59,12 +61,12 @@ const KEYMAP = {
         [{trans:true},{l:'F11',k:'F11'},{l:'F12',k:'F12'},{l:'Prev'},{l:'Play'},{l:'Next'}]
       ],
       right: [
-        [{l:'/',k:'/'},{l:'7',k:'7'},{l:'8',k:'8'},{l:'9',k:'9'},{l:'-',k:'-'},{l:'Boot'}],
-        [{l:'*',k:'*'},{l:'4',k:'4',sub:'Sft'},{l:'5',k:'5',sub:'Ctl'},{l:'6',k:'6',sub:'Alt'},{l:'+',k:'+',sub:'GUI'},{l:'=',k:'='}],
-        [{l:'0',k:'0'},{l:'1',k:'1'},{l:'2',k:'2'},{l:'3',k:'3'},{l:'.',k:'.'},{trans:true}]
+        [{l:'PrtSc',k:'PrintScreen'},{l:'/',k:'/'},{l:'7',k:'7'},{l:'8',k:'8'},{l:'9',k:'9'},{l:'-',k:'-'}],
+        [{trans:true},{l:'*',k:'*'},{l:'4',k:'4',sub:'Sft'},{l:'5',k:'5',sub:'Ctl'},{l:'6',k:'6',sub:'Alt'},{l:'+',k:'+'}],
+        [{blank:true},{l:'0',k:'0'},{l:'1',k:'1'},{l:'2',k:'2'},{l:'3',k:'3'},{l:'.',k:'.'}]
       ],
-      leftThumbs: [{l:'Vol-'},{l:'Mute'},{l:'Vol+'}],
-      rightThumbs: [{l:'0',k:'0'},{l:'▽▽▽',held:'FN'},{trans:true}]
+      leftThumbs: [{l:'Vol-'},{l:'Mute'},{blank:true},{l:'Vol+'},{trans:true},{trans:true}],
+      rightThumbs: [{trans:true},{trans:true},{l:'▽▽▽',held:'FN'},{l:'0',k:'0'},{l:'.',k:'.'},{l:'=',k:'='}]
     }
   ]
 };
@@ -89,7 +91,9 @@ const KEY = (() => {
   });
 
   const FINGERS_L = ['pinky (outer)', 'pinky', 'ring', 'middle', 'index', 'index (inner)'];
-  const FINGERS_R = ['index (inner)', 'index', 'middle', 'ring', 'pinky', 'pinky (outer)'];
+  // right hand shifted inward one column: col0 is the new inner reach column,
+  // then index-inner (D/F), index (H/G), middle, ring, pinky.
+  const FINGERS_R = ['inner', 'index (inner)', 'index', 'middle', 'ring', 'pinky'];
 
   function fingerOf(pos) {
     if (pos.row === 'T') return 'thumb';
@@ -118,7 +122,7 @@ const KEY = (() => {
   // The HRM Shift on the hand OPPOSITE the target key: U (left index) / H (right index)
   function hrmShiftFor(pos) {
     return pos.side === 'L'
-      ? { layer: 0, side: 'R', row: 1, col: 1, name: 'H (right index)' }
+      ? { layer: 0, side: 'R', row: 1, col: 2, name: 'H (right index)' }
       : { layer: 0, side: 'L', row: 1, col: 4, name: 'U (left index)' };
   }
 
